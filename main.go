@@ -318,7 +318,8 @@ func handleDNSRequest(buf []byte, dnsResolver func(msg *dns.Msg) (*dns.Msg, erro
 		}
 	}
 
-	headers := fsthttp.Header{"Content-Type": []string{"application/dns-message"}}
+	headers := fsthttp.Header{}
+	headers.Set("Content-Type", "application/dns-message")
 	var minttl = 600
 	dohminttl, err := GetDOH_MINTTL()
 	if err != nil {
@@ -331,7 +332,7 @@ func handleDNSRequest(buf []byte, dnsResolver func(msg *dns.Msg) (*dns.Msg, erro
 		minttl = ArrayReduce(res.Answer, minttl, func(acc int, v dns.RR) int {
 			return int(math.Max(float64(acc), float64(v.Header().Ttl)))
 		})
-		headers["cache-control"] = []string{"public,max-age=" + fmt.Sprint(minttl) + ",s-maxage=" + fmt.Sprint(minttl)}
+		headers.Set("cache-control", "public,max-age="+fmt.Sprint(minttl)+",s-maxage="+fmt.Sprint(minttl))
 	}
 	for _, rr := range res.Answer {
 		rr.Header().Ttl = uint32(math.Max(float64(minttl), float64(rr.Header().Ttl)))
