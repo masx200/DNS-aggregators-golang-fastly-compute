@@ -76,12 +76,12 @@ func DnsResolver(msg *dns.Msg, requestheaders map[string][]string) (*dns.Msg, ma
 	}
 	log.Println("DOH_ENDPOINT:", dohendpoions)
 	var results = []*dns.Msg{}
-	var waitchan = make(chan DNSResult, len(dohendpoions))
+	var waitchan = make(chan *DNSResult, len(dohendpoions))
 
 	for _, doh := range dohendpoions {
 		go func(doh string) {
 			var res, header, err = DohClient(msg, doh, requestheaders)
-			waitchan <- DNSResult{
+			waitchan <- &DNSResult{
 				Msg:    res,
 				Err:    err,
 				Header: header,
@@ -370,8 +370,8 @@ func handleDNSRequest(buf []byte, dnsResolver DOHRoundTripper, requestheaders ma
 	/* 如果数据包太大,可能有兼容性问题 */
 
 	for len(buf) > 512 {
-		//删除res.Answer的后一半
-		res.Answer = res.Answer[:len(res.Answer)/2]
+		//删除res.Answer的后一半的一半
+		res.Answer = res.Answer[:len(res.Answer)*3/4]
 		buf, err = res.Pack()
 		if err != nil {
 			return &fsthttp.Response{
