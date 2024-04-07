@@ -47,11 +47,14 @@ import (
 //	*fsthttp.Response - 表示处理后的HTTP响应。
 type FastlyHttpMiddleWare = func(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Response) *fsthttp.Response
 
+type DOHRoundTripper = func(msg *dns.Msg, headers map[string][]string) (*dns.Msg, map[string][]string, error)
+
 // DNSResult 结构体用于保存DNS查询的结果和可能发生的错误。
 // 其中包含一个dns.Msg类型的Msg字段用于保存DNS消息体，以及一个error类型的Err字段用于保存查询过程中可能发生的错误。
 type DNSResult struct {
-	Msg *dns.Msg // DNS查询的完整响应消息体
-	Err error    // DNS查询过程中发生的错误
+	Msg    *dns.Msg // DNS查询的完整响应消息体
+	Err    error    // DNS查询过程中发生的错误
+	Header map[string][]string
 }
 
 // DnsResolver 是一个通过DOH（DNS over HTTPS）协议进行DNS解析的函数。
@@ -63,8 +66,9 @@ type DNSResult struct {
 // 返回值:
 // *dns.Msg - 处理后的DNS响应消息。
 // error - 解析过程中发生的错误（如果有）。
-func DnsResolver(msg *dns.Msg, headers map[string][]string) (res *dns.Msg, err error) {
-	res = msg
+func DnsResolver(msg *dns.Msg, requestheaders map[string][]string) (*dns.Msg, map[string][]string, error) {
+	var err error
+	var res = msg
 	dohendpoions, err := GetDOH_ENDPOINT()
 	if len(dohendpoions) == 0 || err != nil {
 		log.Println("DOH_ENDPOINT is empty or error " + err.Error())
@@ -76,12 +80,17 @@ func DnsResolver(msg *dns.Msg, headers map[string][]string) (res *dns.Msg, err e
 
 	for _, doh := range dohendpoions {
 		go func(doh string) {
-			var res, err = DohClient(msg, doh, headers)
-			waitchan <- DNSResult{Msg: res, Err: err}
+			var res, header, err = DohClient(msg, doh, requestheaders)
+			waitchan <- DNSResult{
+				Msg:    res,
+				Err:    err,
+				Header: header,
+			}
 		}(doh)
 
 	}
 	var errs = []error{}
+	var headers = []map[string][]string{}
 	for range dohendpoions {
 		var result, ok = <-waitchan
 		if ok {
@@ -90,12 +99,12 @@ func DnsResolver(msg *dns.Msg, headers map[string][]string) (res *dns.Msg, err e
 				errs = append(errs, result.Err)
 			} else {
 				results = append(results, result.Msg)
-
+				headers = append(headers, result.Header)
 			}
 		}
 	}
 	if len(results) == 0 {
-		return nil, errors.New("no dns result,all servers failure\n" + strings.Join(ArrayMap(errs, func(err error) string {
+		return nil, nil, errors.New("no dns result,all servers failure\n" + strings.Join(ArrayMap(errs, func(err error) string {
 
 			return err.Error()
 		}), "\n"))
@@ -118,7 +127,17 @@ func DnsResolver(msg *dns.Msg, headers map[string][]string) (res *dns.Msg, err e
 		return rr.String()
 	})
 	res.Answer = RandomShuffle(messages)
-	return res, nil
+
+	var responseheaders = http.Header{}
+	for _, header := range headers {
+		for k, values := range header {
+			for _, v := range values {
+				responseheaders.Add(k, v)
+			}
+		}
+
+	}
+	return res, responseheaders, nil
 } // ArrayReduce 函数用于将数组中的元素逐步减少到一个单一的值，
 // 通过应用一个提供的函数到数组的每个元素上，并将结果累积。
 //
@@ -192,7 +211,7 @@ func UniqBy[T any, Y comparable](arr []T, fn func(T) Y) []T {
 // dnsResolver: 一个函数，用于解析DNS请求并返回响应。它接收一个dns.Msg类型的参数，返回一个dns.Msg类型的响应和可能的错误。
 // getPathname: 一个函数，用于获取DNS请求的URL路径。
 // 返回值: 返回一个FastlyHttpMiddleWare类型的函数，该函数可用于处理HTTP请求。
-func CreateDOHMiddleWare(dnsResolver func(msg *dns.Msg, headers map[string][]string) (*dns.Msg, error), getPathname func() string) FastlyHttpMiddleWare {
+func CreateDOHMiddleWare(dnsResolver DOHRoundTripper, getPathname func() string) FastlyHttpMiddleWare {
 	var DohGetPost = func(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Response) *fsthttp.Response {
 		var requestheaders = r.Header.Clone()
 		if !(r.URL.Path == getPathname()) {
@@ -245,19 +264,19 @@ func CreateDOHMiddleWare(dnsResolver func(msg *dns.Msg, headers map[string][]str
 // 返回值:
 // *dns.Msg: 指向接收到的DNS响应消息的指针。
 // error: 如果在发送查询或处理响应时遇到错误，则返回错误信息；否则返回nil。
-func DohClient(msg *dns.Msg, dohServerURL string, requestheaders map[string][]string) (*dns.Msg, error) {
+func DohClient(msg *dns.Msg, dohServerURL string, requestheaders map[string][]string) (*dns.Msg, map[string][]string, error) {
 	/* 为了doh的缓存,需要设置id为0 ,可以缓存*/
 	msg.Id = 0
 	body, err := msg.Pack()
 	if err != nil {
 		log.Println(dohServerURL, err)
-		return nil, err
+		return nil, nil, err
 	}
 	//http request doh
 	req, err := fsthttp.NewRequest(http.MethodGet, dohServerURL, nil)
 	if err != nil {
 		log.Println(dohServerURL, err)
-		return nil, err
+		return nil, nil, err
 	}
 	var query = req.URL.Query()
 	query.Add("dns", base64.RawURLEncoding.EncodeToString(body))
@@ -266,41 +285,41 @@ func DohClient(msg *dns.Msg, dohServerURL string, requestheaders map[string][]st
 	res, err := req.Send(context.Background(), req.Host)
 	if err != nil {
 		log.Println(dohServerURL, err)
-		return nil, err
+		return nil, nil, err
 	}
 	//res.status check
 	if res.StatusCode != 200 {
 		log.Println(dohServerURL, "http status code is not 200 "+fmt.Sprintf("status code is %d", res.StatusCode))
-		return nil, fmt.Errorf("http status code is not 200" + fmt.Sprintf("status code is %d", res.StatusCode))
+		return nil, nil, fmt.Errorf("http status code is not 200" + fmt.Sprintf("status code is %d", res.StatusCode))
 	}
 
 	//check content-type
 	if res.Header.Get("Content-Type") != "application/dns-message" {
 		log.Println(dohServerURL, "content-type is not application/dns-message "+res.Header.Get("Content-Type"))
-		return nil, fmt.Errorf(dohServerURL, "content-type is not application/dns-message "+res.Header.Get("Content-Type"))
+		return nil, nil, fmt.Errorf(dohServerURL, "content-type is not application/dns-message "+res.Header.Get("Content-Type"))
 	}
 	//利用ioutil包读取百度服务器返回的数据
 	data, err := io.ReadAll(res.Body)
 	defer res.Body.Close() //一定要记得关闭连接
 	if err != nil {
 		log.Println(dohServerURL, err)
-		return nil, err
+		return nil, nil, err
 	}
 	// log.Printf("%s", data)
 	resp := &dns.Msg{}
 	err = resp.Unpack(data)
 	if err != nil {
 		log.Println(dohServerURL, err)
-		return nil, err
+		return nil, nil, err
 	}
-	return resp, nil
+	return resp, res.Header, nil
 }
 
 // handleDNSRequest 处理DNS请求
 // buf []byte: 包含DNS请求数据的字节切片
 // dnsResolver func(msg *dns.Msg) (*dns.Msg, error): 一个函数，用于解析DNS请求并返回响应
 // 返回值 *fsthttp.Response: 返回一个HTTP响应，包含DNS响应数据或错误信息
-func handleDNSRequest(buf []byte, dnsResolver func(msg *dns.Msg, headers map[string][]string) (*dns.Msg, error), requestheaders map[string][]string) *fsthttp.Response {
+func handleDNSRequest(buf []byte, dnsResolver DOHRoundTripper, requestheaders map[string][]string) *fsthttp.Response {
 	var err error
 	req := &dns.Msg{}
 	if err = req.Unpack(buf); err != nil {
@@ -311,7 +330,7 @@ func handleDNSRequest(buf []byte, dnsResolver func(msg *dns.Msg, headers map[str
 			Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusBadRequest) + "\n" + err.Error())),
 		}
 	}
-	res, err := dnsResolver(req, requestheaders)
+	res, upstreamresponseheaders, err := dnsResolver(req, requestheaders)
 	if err != nil {
 
 		return &fsthttp.Response{
@@ -346,6 +365,26 @@ func handleDNSRequest(buf []byte, dnsResolver func(msg *dns.Msg, headers map[str
 			Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
 		}
 
+	}
+
+	/* 如果数据包太大,可能有兼容性问题 */
+
+	for len(buf) > 512 {
+		//删除res.Answer的后一半
+		res.Answer = res.Answer[:len(res.Answer)/2]
+		buf, err = res.Pack()
+		if err != nil {
+			return &fsthttp.Response{
+				StatusCode: http.StatusInternalServerError,
+				Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
+			}
+
+		}
+	}
+	for key, values := range upstreamresponseheaders {
+		for _, v := range values {
+			responseheaders.Add("x-debug-"+key, v)
+		}
 	}
 	return &fsthttp.Response{
 		StatusCode: http.StatusOK,
