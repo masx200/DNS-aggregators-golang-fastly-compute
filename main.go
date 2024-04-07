@@ -35,10 +35,23 @@ import (
 
 // BackendName is the name of our service backend.
 // const BackendName = "origin_0"
+// FastlyHttpMiddleWare 是一个类型，代表一个HTTP中间件函数。该函数接收一个fsthttp.Request指针和一个next函数，
+// next函数当调用时返回一个fsthttp.Response指针。该中间件函数主要用来在请求处理流程中间插入自定义逻辑。
+// 参数:
+//
+//	r *fsthttp.Request - 表示当前的HTTP请求。
+//	next func() *fsthttp.Response - 一个函数，当调用时会继续处理HTTP请求，并返回一个HTTP响应。
+//
+// 返回值:
+//
+//	*fsthttp.Response - 表示处理后的HTTP响应。
 type FastlyHttpMiddleWare = func(r *fsthttp.Request, next func() *fsthttp.Response) *fsthttp.Response
+
+// DNSResult 结构体用于保存DNS查询的结果和可能发生的错误。
+// 其中包含一个dns.Msg类型的Msg字段用于保存DNS消息体，以及一个error类型的Err字段用于保存查询过程中可能发生的错误。
 type DNSResult struct {
-	Msg *dns.Msg
-	Err error
+	Msg *dns.Msg // DNS查询的完整响应消息体
+	Err error    // DNS查询过程中发生的错误
 }
 
 func DnsResolver(msg *dns.Msg) (res *dns.Msg, err error) {
