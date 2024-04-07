@@ -526,6 +526,9 @@ func GetDOH_ENDPOINT() []string {
 	}
 
 }
+
+// GetDOH_MINTTL 从加密存储中获取 DNS-over-HTTPS (DOH) 的最小TTL值。
+// 该函数不接受参数，返回值为解析后的整型 TTL 值以及可能出现的错误。
 func GetDOH_MINTTL() (int, error) {
 	var store, err = secretstore.Open("DNS-aggregators-golang-fastly-compute")
 	if err != nil {
@@ -547,6 +550,10 @@ func GetDOH_MINTTL() (int, error) {
 	return (strconv.Atoi(str))
 
 }
+
+// GetDOH_PATHNAME 函数用于从安全存储中获取 DOH（DNS over HTTPS）的路径名称。
+// 该函数不接受参数，返回一个字符串和一个错误值。
+// 返回的字符串是 DOH 路径名称，如果获取失败，则返回空字符串和相应的错误信息。
 func GetDOH_PATHNAME() (string, error) {
 	var store, err = secretstore.Open("DNS-aggregators-golang-fastly-compute")
 	if err != nil {
@@ -568,6 +575,14 @@ func GetDOH_PATHNAME() (string, error) {
 	return (str), nil
 
 }
+
+// RandomShuffle 函数用于对指定类型的切片进行随机打乱。
+//
+// 参数:
+// arr []T: 待打乱顺序的切片。
+//
+// 返回值:
+// []T: 打乱顺序后的切片。
 func RandomShuffle[T any](arr []T) []T {
 	// 使用当前时间的纳秒级种子初始化随机数生成器，以确保每次运行结果都不同。
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
