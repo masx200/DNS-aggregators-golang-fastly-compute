@@ -425,19 +425,21 @@ func main() {
 
 		// var notfound = false
 
-		var response = CreateDOHMiddleWare(DnsResolver, func() string {
+		var response = Forwarded()(r, func(r *fsthttp.Request) *fsthttp.Response {
+			return CreateDOHMiddleWare(DnsResolver, func() string {
 
-			var PATHNAME, err = GetDOH_PATHNAME()
-			if err != nil {
-				log.Println(err)
-				return "/"
-			} else {
-				return PATHNAME
-			}
-			// return "/"
-		})(r, func(*fsthttp.Request) *fsthttp.Response {
-			// notfound = true
-			return &fsthttp.Response{StatusCode: fsthttp.StatusNotFound}
+				var PATHNAME, err = GetDOH_PATHNAME()
+				if err != nil {
+					log.Println(err)
+					return "/"
+				} else {
+					return PATHNAME
+				}
+				// return "/"
+			})(r, func(*fsthttp.Request) *fsthttp.Response {
+				// notfound = true
+				return &fsthttp.Response{StatusCode: fsthttp.StatusNotFound}
+			})
 		})
 		if /* notfound && */ response.StatusCode == fsthttp.StatusNotFound {
 			ClientIP := r.RemoteAddr
