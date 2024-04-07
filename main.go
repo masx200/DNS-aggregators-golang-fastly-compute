@@ -45,7 +45,7 @@ import (
 // 返回值:
 //
 //	*fsthttp.Response - 表示处理后的HTTP响应。
-type FastlyHttpMiddleWare = func(r *fsthttp.Request, next func() *fsthttp.Response) *fsthttp.Response
+type FastlyHttpMiddleWare = func(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Response) *fsthttp.Response
 
 // DNSResult 结构体用于保存DNS查询的结果和可能发生的错误。
 // 其中包含一个dns.Msg类型的Msg字段用于保存DNS消息体，以及一个error类型的Err字段用于保存查询过程中可能发生的错误。
@@ -193,10 +193,10 @@ func UniqBy[T any, Y comparable](arr []T, fn func(T) Y) []T {
 // getPathname: 一个函数，用于获取DNS请求的URL路径。
 // 返回值: 返回一个FastlyHttpMiddleWare类型的函数，该函数可用于处理HTTP请求。
 func CreateDOHMiddleWare(dnsResolver func(msg *dns.Msg, headers map[string][]string) (*dns.Msg, error), getPathname func() string) FastlyHttpMiddleWare {
-	var DohGetPost = func(r *fsthttp.Request, next func() *fsthttp.Response) *fsthttp.Response {
+	var DohGetPost = func(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Response) *fsthttp.Response {
 		var requestheaders = r.Header.Clone()
 		if !(r.URL.Path == getPathname()) {
-			return next()
+			return next(r)
 		}
 		var dnsParam = r.URL.Query().Get("dns")
 		if len(dnsParam) > 0 && r.URL.Path == getPathname() && r.Method == "GET" {
@@ -229,7 +229,7 @@ func CreateDOHMiddleWare(dnsResolver func(msg *dns.Msg, headers map[string][]str
 			}
 			return handleDNSRequest(buf, dnsResolver, requestheaders)
 		}
-		return next()
+		return next(r)
 
 	}
 	return DohGetPost
@@ -435,7 +435,7 @@ func main() {
 				return PATHNAME
 			}
 			// return "/"
-		})(r, func() *fsthttp.Response {
+		})(r, func(*fsthttp.Request) *fsthttp.Response {
 			// notfound = true
 			return &fsthttp.Response{StatusCode: fsthttp.StatusNotFound}
 		})
@@ -598,4 +598,27 @@ func RandomShuffle[T any](arr []T) []T {
 		arr[i], arr[j] = arr[j], arr[i]
 	})
 	return arr
+}
+func Forwarded() FastlyHttpMiddleWare {
+	return func(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Response) *fsthttp.Response {
+		var clienthost = r.RemoteAddr
+		var address = r.Host
+		if address == "" {
+			address = r.URL.Host
+		}
+		var proto = r.URL.Scheme //"http"
+
+		// if r.TLS != nil {
+		// 	proto = "https"
+		// }
+		forwarded := fmt.Sprintf(
+			"for=%s;by=%s;host=%s;proto=%s",
+			clienthost, // 代理自己的标识或IP地址
+			r.Host,     // 代理的标识
+			address,    // 原始请求的目标主机名
+			proto,      // 或者 "https" 根据实际协议
+		)
+		r.Header.Add("Forwarded", forwarded)
+		return next(r)
+	}
 }
