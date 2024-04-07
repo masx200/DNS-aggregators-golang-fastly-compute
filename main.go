@@ -371,7 +371,7 @@ func handleDNSRequest(buf []byte, dnsResolver DOHRoundTripper, requestheaders ma
 
 	for len(buf) > 512 {
 		//删除res.Answer的后一半的一半
-		res.Answer = res.Answer[:len(res.Answer)*3/4]
+		res.Answer = res.Answer[:len(res.Answer)/2]
 		buf, err = res.Pack()
 		if err != nil {
 			return &fsthttp.Response{
