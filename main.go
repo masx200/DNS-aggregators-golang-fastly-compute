@@ -4,11 +4,13 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	"github.com/fastly/compute-sdk-go/secretstore"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/fastly/compute-sdk-go/secretstore"
 
 	// "io"
 	// "os"
@@ -30,10 +32,46 @@ import (
 // BackendName is the name of our service backend.
 // const BackendName = "origin_0"
 type FastlyHttpMiddleWare = func(r *fsthttp.Request, next func() *fsthttp.Response) *fsthttp.Response
+type DNSResult struct {
+	Msg *dns.Msg
+	Err error
+}
 
-//	func DnsResolver(msg *dns.Msg) (res *dns.Msg, err error) {
-//		return msg, nil
-//	}
+func DnsResolver(msg *dns.Msg) (res *dns.Msg, err error) {
+	res = msg
+	var dohendpoions = GetDOH_ENDPOINT()
+	if len(dohendpoions) == 0 {
+		dohendpoions = []string{"https://doh.360.cn/dns-query"}
+	}
+
+	var results = []*dns.Msg{}
+	var waitchan = make(chan DNSResult, len(dohendpoions))
+
+	for _, doh := range dohendpoions {
+		go func(doh string) {
+			var res, err = DohClient(msg, doh)
+			waitchan <- DNSResult{Msg: res, Err: err}
+		}(doh)
+
+	}
+
+	for range dohendpoions {
+		var result, ok = <-waitchan
+		if ok {
+			if result.Err != nil {
+				fmt.Println(result.Err)
+			} else {
+				results = append(results, result.Msg)
+
+			}
+		}
+	}
+	if len(results) == 0 {
+		return nil, errors.New("no dns result,all servers failure")
+	}
+	res = results[0]
+	return res, nil
+}
 func CreateDOHMiddleWare(dnsResolver func(msg *dns.Msg) (*dns.Msg, error), getPathname func() string) FastlyHttpMiddleWare {
 	var DohGetPost = func(r *fsthttp.Request, next func() *fsthttp.Response) *fsthttp.Response {
 		if !(r.URL.Path == getPathname()) {
