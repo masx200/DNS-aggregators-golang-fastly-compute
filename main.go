@@ -232,6 +232,17 @@ func CreateDOHMiddleWare(dnsResolver func(msg *dns.Msg) (*dns.Msg, error), getPa
 	}
 	return DohGetPost
 }
+
+// DohClient 是一个用于通过DOH（DNS over HTTPs）与DNS服务器进行通信的函数。
+// 它发送一个DNS查询消息到指定的DOH服务器，并返回服务器的响应消息。
+//
+// 参数:
+// msg: 指向dns.Msg的指针，包含要发送的DNS查询。
+// dohServerURL: DOH服务器的URL，用于构建HTTP请求。
+//
+// 返回值:
+// *dns.Msg: 指向接收到的DNS响应消息的指针。
+// error: 如果在发送查询或处理响应时遇到错误，则返回错误信息；否则返回nil。
 func DohClient(msg *dns.Msg, dohServerURL string) (*dns.Msg, error) {
 	/* 为了doh的缓存,需要设置id为0 ,可以缓存*/
 	msg.Id = 0
@@ -281,6 +292,11 @@ func DohClient(msg *dns.Msg, dohServerURL string) (*dns.Msg, error) {
 	}
 	return resp, nil
 }
+
+// handleDNSRequest 处理DNS请求
+// buf []byte: 包含DNS请求数据的字节切片
+// dnsResolver func(msg *dns.Msg) (*dns.Msg, error): 一个函数，用于解析DNS请求并返回响应
+// 返回值 *fsthttp.Response: 返回一个HTTP响应，包含DNS响应数据或错误信息
 func handleDNSRequest(buf []byte, dnsResolver func(msg *dns.Msg) (*dns.Msg, error)) *fsthttp.Response {
 	var err error
 	req := &dns.Msg{}
@@ -473,6 +489,10 @@ func main() {
 
 	})
 }
+
+// GetDOH_ENDPOINT 从安全存储中获取DNS-over-HTTPS (DOH)的服务器端点列表。
+// 该函数不接受参数，返回一个字符串切片，包含一个或多个DOH服务器的URL。
+// 如果无法从存储中成功获取数据，或数据格式不正确，则返回空的字符串切片。
 func GetDOH_ENDPOINT() []string {
 	var store, err = secretstore.Open("DNS-aggregators-golang-fastly-compute")
 	if err != nil {
