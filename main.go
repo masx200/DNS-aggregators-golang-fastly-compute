@@ -110,7 +110,7 @@ func DnsResolver(msg *dns.Msg, requestheaders map[string][]string) (*dns.Msg, ma
 		}), "\n"))
 	}
 
-	// res = results[0]
+	res = results[0]
 	/* 可能是dnssec的问题 */
 	res.MsgHdr.Rcode = dns.RcodeSuccess
 	res.MsgHdr.Response = true
