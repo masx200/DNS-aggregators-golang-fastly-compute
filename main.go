@@ -187,7 +187,10 @@ func UniqBy[T any, Y comparable](arr []T, fn func(T) Y) []T {
 	}
 
 	return result
-}
+} // CreateDOHMiddleWare 创建一个用于处理DNS-over-HTTPs请求的中间件。
+// dnsResolver: 一个函数，用于解析DNS请求并返回响应。它接收一个dns.Msg类型的参数，返回一个dns.Msg类型的响应和可能的错误。
+// getPathname: 一个函数，用于获取DNS请求的URL路径。
+// 返回值: 返回一个FastlyHttpMiddleWare类型的函数，该函数可用于处理HTTP请求。
 func CreateDOHMiddleWare(dnsResolver func(msg *dns.Msg) (*dns.Msg, error), getPathname func() string) FastlyHttpMiddleWare {
 	var DohGetPost = func(r *fsthttp.Request, next func() *fsthttp.Response) *fsthttp.Response {
 		if !(r.URL.Path == getPathname()) {
@@ -297,14 +300,7 @@ func handleDNSRequest(buf []byte, dnsResolver func(msg *dns.Msg) (*dns.Msg, erro
 			Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
 		}
 	}
-	buf, err = res.Pack()
-	if err != nil {
-		return &fsthttp.Response{
-			StatusCode: http.StatusInternalServerError,
-			Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
-		}
 
-	}
 	headers := fsthttp.Header{"Content-Type": []string{"application/dns-message"}}
 	var minttl = 600
 	dohminttl, err := GetDOH_MINTTL()
@@ -320,7 +316,17 @@ func handleDNSRequest(buf []byte, dnsResolver func(msg *dns.Msg) (*dns.Msg, erro
 		})
 		headers["cache-control"] = []string{"public,max-age=" + fmt.Sprint(minttl) + ",s-maxage=" + fmt.Sprint(minttl)}
 	}
+	for _, rr := range res.Answer {
+		rr.Header().Ttl = uint32(math.Max(float64(minttl), float64(rr.Header().Ttl)))
+	}
+	buf, err = res.Pack()
+	if err != nil {
+		return &fsthttp.Response{
+			StatusCode: http.StatusInternalServerError,
+			Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
+		}
 
+	}
 	return &fsthttp.Response{
 		StatusCode: http.StatusOK,
 		Header:     headers,
@@ -397,7 +403,7 @@ func main() {
 		// 	return
 		// }
 
-		var notfound = false
+		// var notfound = false
 
 		var response = CreateDOHMiddleWare(DnsResolver, func() string {
 
@@ -410,10 +416,10 @@ func main() {
 			}
 			// return "/"
 		})(r, func() *fsthttp.Response {
-			notfound = true
+			// notfound = true
 			return &fsthttp.Response{StatusCode: fsthttp.StatusNotFound}
 		})
-		if notfound && response.StatusCode == fsthttp.StatusNotFound {
+		if /* notfound && */ response.StatusCode == fsthttp.StatusNotFound {
 			ClientIP := r.RemoteAddr
 			resp := make(map[string]any)
 			resp["request"] = map[string]any{
