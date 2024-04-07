@@ -459,12 +459,12 @@ func main() {
 				fmt.Fprintln(w, err)
 				return
 			}
-			w.Write(JsonResp)
+
 			w.Header().Set("Content-Type", "application/json")
 			// Return 200 OK response
 			w.WriteHeader(fsthttp.StatusOK)
 			//return
-
+			w.Write(JsonResp)
 			// }
 			// resp, err := r.Send(ctx, BackendName)
 			// if err != nil {
