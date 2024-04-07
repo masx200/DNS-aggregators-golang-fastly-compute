@@ -351,7 +351,7 @@ func main() {
 			notfound = true
 			return &fsthttp.Response{StatusCode: fsthttp.StatusNotFound}
 		})
-		if notfound {
+		if notfound && response.StatusCode == fsthttp.StatusNotFound {
 			ClientIP := r.RemoteAddr
 			resp := make(map[string]any)
 			resp["request"] = map[string]any{
