@@ -493,21 +493,21 @@ func main() {
 // GetDOH_ENDPOINT 从安全存储中获取DNS-over-HTTPS (DOH)的服务器端点列表。
 // 该函数不接受参数，返回一个字符串切片，包含一个或多个DOH服务器的URL。
 // 如果无法从存储中成功获取数据，或数据格式不正确，则返回空的字符串切片。
-func GetDOH_ENDPOINT() []string {
+func GetDOH_ENDPOINT() ([]string, error) {
 	var store, err = secretstore.Open("DNS-aggregators-golang-fastly-compute")
 	if err != nil {
 		log.Println(err)
-		return []string{}
+		return []string{}, err
 	}
 	s, err := store.Get("DOH_ENDPOINT")
 	if err != nil {
 		log.Println(err)
-		return []string{}
+		return []string{}, err
 	}
 	v, err := s.Plaintext()
 	if err != nil {
 		log.Println(err)
-		return []string{}
+		return []string{}, err
 	}
 	str := string(v)
 
@@ -518,11 +518,11 @@ func GetDOH_ENDPOINT() []string {
 		err = json.Unmarshal([]byte(str), &arr)
 		if err != nil {
 			log.Println(err)
-			return []string{}
+			return []string{}, err
 		}
-		return arr
+		return arr, nil
 	} else {
-		return []string{str}
+		return []string{str}, nil
 	}
 
 }
