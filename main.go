@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strings"
 
@@ -69,8 +70,66 @@ func DnsResolver(msg *dns.Msg) (res *dns.Msg, err error) {
 	if len(results) == 0 {
 		return nil, errors.New("no dns result,all servers failure")
 	}
+
 	res = results[0]
+	res.MsgHdr.Rcode = dns.RcodeSuccess
+	for _, result := range results {
+		log.Println(result)
+	}
+	answers := ArrayFlat(ArrayMap(results, func(msg *dns.Msg) []dns.RR {
+		return msg.Answer
+	}))
+	var maxttl uint32 = ArrayReduce(answers, 0, func(a uint32, b dns.RR) uint32 {
+		return uint32(math.Max(float64(a), float64(b.Header().Ttl)))
+	})
+
+	var messages = UniqBy(answers, func(rr dns.RR) string {
+		rr.Header().Ttl = maxttl
+		return rr.String()
+	})
+	res.Answer = messages
 	return res, nil
+}
+func ArrayReduce[T any, U any](arr []T, initial U, fn func(U, T) U) U {
+	result := initial
+
+	for _, v := range arr {
+		result = fn(result, v)
+	}
+
+	return result
+}
+func ArrayFlat[T any](arr [][]T) []T {
+	result := make([]T, 0)
+
+	for _, innerArr := range arr {
+		result = append(result, innerArr...)
+	}
+
+	return result
+}
+func ArrayMap[T any, U any](arr []T, fn func(T) U) []U {
+	result := make([]U, len(arr))
+
+	for i, v := range arr {
+		result[i] = fn(v)
+	}
+
+	return result
+}
+func UniqBy[T any](arr []T, fn func(T) string) []T {
+	result := make([]T, 0)
+	seen := make(map[string]bool)
+
+	for _, v := range arr {
+		key := fn(v)
+		if !seen[key] {
+			seen[key] = true
+			result = append(result, v)
+		}
+	}
+
+	return result
 }
 func CreateDOHMiddleWare(dnsResolver func(msg *dns.Msg) (*dns.Msg, error), getPathname func() string) FastlyHttpMiddleWare {
 	var DohGetPost = func(r *fsthttp.Request, next func() *fsthttp.Response) *fsthttp.Response {
