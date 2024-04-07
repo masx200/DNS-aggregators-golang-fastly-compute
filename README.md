@@ -79,3 +79,7 @@ security-related issues.
 设置源站的名称为上游服务器的域名
 
 设置网站的Certificate hostname,SNI hostname,Override host为上游服务器的域名
+
+# 设置doh服务的最小ttl(秒)
+
+在resources的`secret-stores`里面设置名称为"DNS-aggregators-golang-fastly-compute"的`secret stores`里面的"DOH_MINTTL"为"600".
