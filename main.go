@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/fastly/compute-sdk-go/secretstore"
@@ -55,12 +56,13 @@ func DnsResolver(msg *dns.Msg) (res *dns.Msg, err error) {
 		}(doh)
 
 	}
-
+	var errs = []error{}
 	for range dohendpoions {
 		var result, ok = <-waitchan
 		if ok {
 			if result.Err != nil {
 				fmt.Println(result.Err)
+				errs = append(errs, result.Err)
 			} else {
 				results = append(results, result.Msg)
 
@@ -68,7 +70,10 @@ func DnsResolver(msg *dns.Msg) (res *dns.Msg, err error) {
 		}
 	}
 	if len(results) == 0 {
-		return nil, errors.New("no dns result,all servers failure")
+		return nil, errors.New("no dns result,all servers failure\n" + strings.Join(ArrayMap(errs, func(err error) string {
+
+			return err.Error()
+		}), ","))
 	}
 
 	res = results[0]
@@ -248,9 +253,25 @@ func handleDNSRequest(buf []byte, dnsResolver func(msg *dns.Msg) (*dns.Msg, erro
 		}
 
 	}
+	headers := fsthttp.Header{"Content-Type": []string{"application/dns-message"}}
+	var minttl = 600
+	dohminttl, err := GetDOH_Min_TTL()
+	if err != nil {
+		log.Println(err)
+	} else {
+		minttl = dohminttl
+	}
+	if len(res.Answer) > 0 {
+
+		minttl = ArrayReduce(res.Answer, minttl, func(acc int, v dns.RR) int {
+			return int(math.Max(float64(acc), float64(v.Header().Ttl)))
+		})
+		headers["cache-control"] = []string{"public,max-age=" + fmt.Sprint(minttl) + ",s-maxage=" + fmt.Sprint(minttl)}
+	}
+
 	return &fsthttp.Response{
 		StatusCode: http.StatusOK,
-		Header:     fsthttp.Header{"Content-Type": []string{"application/dns-message"}},
+		Header:     headers,
 		Body:       io.NopCloser(bytes.NewReader(buf)),
 	}
 }
@@ -396,5 +417,26 @@ func GetDOH_ENDPOINT() []string {
 	} else {
 		return []string{str}
 	}
+
+}
+func GetDOH_Min_TTL() (int, error) {
+	var store, err = secretstore.Open("DNS-aggregators-golang-fastly-compute")
+	if err != nil {
+		log.Println(err)
+		return 0, err
+	}
+	s, err := store.Get("DOH_Min_TTL")
+	if err != nil {
+		log.Println(err)
+		return 0, err
+	}
+	v, err := s.Plaintext()
+	if err != nil {
+		log.Println(err)
+		return 0, err
+	}
+	str := string(v)
+
+	return (strconv.Atoi(str))
 
 }
