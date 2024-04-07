@@ -35,6 +35,9 @@ type FastlyHttpMiddleWare = func(r *fsthttp.Request, next func() *fsthttp.Respon
 //	}
 func CreateDOHMiddleWare(dnsResolver func(msg *dns.Msg) (*dns.Msg, error), getPathname func() string) FastlyHttpMiddleWare {
 	var DohGetPost = func(r *fsthttp.Request, next func() *fsthttp.Response) *fsthttp.Response {
+		if !(r.URL.Path == getPathname()) {
+			return next()
+		}
 		var dnsParam = r.URL.Query().Get("dns")
 		if len(dnsParam) > 0 && r.URL.Path == getPathname() && r.Method == "GET" {
 			var buf []byte
