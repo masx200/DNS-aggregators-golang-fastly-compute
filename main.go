@@ -479,12 +479,13 @@ func main() {
 			// w.WriteHeader(resp.StatusCode)
 			// io.Copy(w, resp.Body)
 		} else {
-			w.WriteHeader(response.StatusCode)
+
 			for header, values := range response.Header {
 				for _, value := range values {
 					w.Header().Add(header, value)
 				}
 			}
+			w.WriteHeader(response.StatusCode)
 			defer response.Body.Close()
 			io.Copy(w, response.Body)
 		}
