@@ -11,7 +11,7 @@ manifest_version = 3
 language = "go"
 
 name = "DNS-aggregators-golang-fastly-compute"
-service_id = "koY80Lsmix8SU9gOhhQjr6"
+service_id = ""
 [scripts]
 env_vars = ["GOARCH=wasm", "GOOS=wasip1"]
 build = "go build -o bin/main.wasm ."
