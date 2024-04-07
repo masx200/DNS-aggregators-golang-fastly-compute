@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/fastly/compute-sdk-go/secretstore"
 	"io"
 	"net/http"
 	"strings"
@@ -266,4 +267,37 @@ func main() {
 		// w.WriteHeader(resp.StatusCode)
 		// io.Copy(w, resp.Body)
 	})
+}
+func GetDOH_ENDPOINT() []string {
+	var store, err = secretstore.Open("DNS-aggregators-golang-fastly-compute")
+	if err != nil {
+		log.Println(err)
+		return []string{}
+	}
+	s, err := store.Get("DOH_ENDPOINT")
+	if err != nil {
+		log.Println(err)
+		return []string{}
+	}
+	v, err := s.Plaintext()
+	if err != nil {
+		log.Println(err)
+		return []string{}
+	}
+	str := string(v)
+
+	if strings.HasPrefix(str, "[") && strings.HasSuffix(str, "]") {
+
+		//json
+		var arr []string
+		err = json.Unmarshal([]byte(str), &arr)
+		if err != nil {
+			log.Println(err)
+			return []string{}
+		}
+		return arr
+	} else {
+		return []string{str}
+	}
+
 }
