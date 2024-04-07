@@ -54,6 +54,15 @@ type DNSResult struct {
 	Err error    // DNS查询过程中发生的错误
 }
 
+// DnsResolver 是一个通过DOH（DNS over HTTPS）协议进行DNS解析的函数。
+// 它接收一个dns.Msg类型的请求消息，并返回处理后的响应消息和可能发生的错误。
+//
+// 参数:
+// msg *dns.Msg - 待处理的DNS请求消息。
+//
+// 返回值:
+// *dns.Msg - 处理后的DNS响应消息。
+// error - 解析过程中发生的错误（如果有）。
 func DnsResolver(msg *dns.Msg) (res *dns.Msg, err error) {
 	res = msg
 	var dohendpoions = GetDOH_ENDPOINT()
@@ -88,7 +97,7 @@ func DnsResolver(msg *dns.Msg) (res *dns.Msg, err error) {
 		return nil, errors.New("no dns result,all servers failure\n" + strings.Join(ArrayMap(errs, func(err error) string {
 
 			return err.Error()
-		}), ","))
+		}), "\n"))
 	}
 
 	res = results[0]
