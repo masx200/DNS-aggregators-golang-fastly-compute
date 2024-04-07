@@ -118,7 +118,18 @@ func DnsResolver(msg *dns.Msg) (res *dns.Msg, err error) {
 	})
 	res.Answer = RandomShuffle(messages)
 	return res, nil
-}
+} // ArrayReduce 函数用于将数组中的元素逐步减少到一个单一的值，
+// 通过应用一个提供的函数到数组的每个元素上，并将结果累积。
+//
+// 参数:
+// T any - 数组元素的类型。
+// U any - 初始值和累积结果的类型。
+// arr []T - 待减少的数组。
+// initial U - 函数计算的初始值。
+// fn func(U, T) U - 一个函数，接受当前累积结果和数组元素作为参数，返回新的累积结果。
+//
+// 返回值:
+// U - 经过所有数组元素处理后的累积结果。
 func ArrayReduce[T any, U any](arr []T, initial U, fn func(U, T) U) U {
 	result := initial
 
@@ -127,7 +138,9 @@ func ArrayReduce[T any, U any](arr []T, initial U, fn func(U, T) U) U {
 	}
 
 	return result
-}
+} // ArrayFlat 是一个将二维切片展平为一维切片的函数。
+// 参数 arr 是一个由 T 类型元素组成的二维切片。
+// 返回值是一个由 T 类型元素组成的一维切片，包含了输入二维切片中的所有元素。
 func ArrayFlat[T any](arr [][]T) []T {
 	result := make([]T, 0)
 
