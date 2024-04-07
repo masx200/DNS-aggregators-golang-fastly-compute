@@ -65,11 +65,12 @@ type DNSResult struct {
 // error - 解析过程中发生的错误（如果有）。
 func DnsResolver(msg *dns.Msg) (res *dns.Msg, err error) {
 	res = msg
-	var dohendpoions = GetDOH_ENDPOINT()
-	if len(dohendpoions) == 0 {
+	dohendpoions, err := GetDOH_ENDPOINT()
+	if len(dohendpoions) == 0 || err != nil {
+		log.Println("DOH_ENDPOINT is empty or error " + err.Error())
 		dohendpoions = []string{"https://doh.360.cn/dns-query"}
 	}
-
+	log.Println("DOH_ENDPOINT:", dohendpoions)
 	var results = []*dns.Msg{}
 	var waitchan = make(chan DNSResult, len(dohendpoions))
 
