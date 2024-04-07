@@ -47,46 +47,52 @@ func CreateDOHMiddleWare(dnsResolver func(msg *dns.Msg) (*dns.Msg, error), getPa
 					Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusBadRequest) + "\n" + err.Error())),
 				}
 			}
-			req := &dns.Msg{}
-			if err = req.Unpack(buf); err != nil {
-				log.Printf("dnsproxy: unpacking http msg: %s", err)
-				// http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-
-				return &fsthttp.Response{
-					StatusCode: http.StatusBadRequest,
-					Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusBadRequest) + "\n" + err.Error())),
-				}
-			}
-			res, err := dnsResolver(req)
-			if err != nil {
-				// http.Error(
-				// 	w,
-				// 	fmt.Sprintf("internal error: %s", err),
-				// 	http.StatusInternalServerError,
-				// )
-				return &fsthttp.Response{
-					StatusCode: http.StatusInternalServerError,
-					Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
-				}
-			}
-			buf, err = res.Pack()
-			if err != nil {
-				return &fsthttp.Response{
-					StatusCode: http.StatusInternalServerError,
-					Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
-				}
-
-			}
-			return &fsthttp.Response{
-				StatusCode: http.StatusOK,
-				Header:     fsthttp.Header{"Content-Type": []string{"application/dns-message"}},
-				Body:       io.NopCloser(bytes.NewReader(buf)),
-			}
+			// http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			// http.Error(
+			// 	w,
+			// 	fmt.Sprintf("internal error: %s", err),
+			// 	http.StatusInternalServerError,
+			// )
+			return handleDNSRequest(buf, dnsResolver)
 		}
 		return next()
 
 	}
 	return DohGetPost
+}
+
+func handleDNSRequest(buf []byte, dnsResolver func(msg *dns.Msg) (*dns.Msg, error)) *fsthttp.Response {
+	var err error
+	req := &dns.Msg{}
+	if err = req.Unpack(buf); err != nil {
+		log.Printf("dnsproxy: unpacking http msg: %s", err)
+
+		return &fsthttp.Response{
+			StatusCode: http.StatusBadRequest,
+			Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusBadRequest) + "\n" + err.Error())),
+		}
+	}
+	res, err := dnsResolver(req)
+	if err != nil {
+
+		return &fsthttp.Response{
+			StatusCode: http.StatusInternalServerError,
+			Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
+		}
+	}
+	buf, err = res.Pack()
+	if err != nil {
+		return &fsthttp.Response{
+			StatusCode: http.StatusInternalServerError,
+			Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
+		}
+
+	}
+	return &fsthttp.Response{
+		StatusCode: http.StatusOK,
+		Header:     fsthttp.Header{"Content-Type": []string{"application/dns-message"}},
+		Body:       io.NopCloser(bytes.NewReader(buf)),
+	}
 }
 
 func main() {
