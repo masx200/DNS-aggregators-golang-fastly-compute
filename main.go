@@ -114,6 +114,8 @@ func DnsResolver(msg *dns.Msg, requestheaders map[string][]string) (*dns.Msg, ma
 	/* 可能是dnssec的问题 */
 	res.MsgHdr.Rcode = dns.RcodeSuccess
 	res.MsgHdr.Response = true
+	res.Ns = results[0].Ns
+	res.Extra = results[0].Extra
 	for _, result := range results {
 		log.Println(result)
 	}
