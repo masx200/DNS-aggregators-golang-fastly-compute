@@ -4,6 +4,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -186,7 +187,15 @@ func main() {
 		// resp]["Address"] = ClientIP
 		JsonResp, err := json.Marshal(resp)
 		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
+			// http.Error(
+			// 	w,
+			// 	fmt.Sprintf("internal error: %s", err),
+			// 	http.StatusInternalServerError,
+			// )
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintln(w, err)
+			return
 		}
 		w.Write(JsonResp)
 		w.Header().Set("Content-Type", "application/json")
