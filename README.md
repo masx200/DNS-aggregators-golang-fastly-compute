@@ -1,8 +1,8 @@
-# client-public-ip-api-at-the-edge-golang-fastly-compute
+# DNS-aggregators-golang-fastly-compute
 
 #### 介绍
 
-client-public-ip-api-at-the-edge-golang-fastly-compute
+DNS-aggregators-golang-fastly-compute
 
 #### 软件架构
 

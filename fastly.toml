@@ -10,7 +10,7 @@ manifest_version = 3
 
 language = "go"
 
-name = "client-public-ip-api-at-the-edge"
+name = "DNS-aggregators-golang-fastly-compute"
 service_id = "koY80Lsmix8SU9gOhhQjr6"
 [scripts]
 env_vars = ["GOARCH=wasm", "GOOS=wasip1"]
