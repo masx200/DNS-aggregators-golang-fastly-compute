@@ -127,8 +127,12 @@ func DnsResolver(msg *dns.Msg, requestheaders map[string][]string) (*dns.Msg, ma
 	})
 
 	var messages = UniqBy(answers, func(rr dns.RR) string {
+
+		var oldttl = rr.Header().Ttl
 		rr.Header().Ttl = maxttl
-		return rr.String()
+		var rrstr = rr.String()
+		rr.Header().Ttl = oldttl
+		return rrstr
 	})
 	res.Answer = RandomShuffle(messages)
 
@@ -359,9 +363,9 @@ func handleDNSRequest(buf []byte, dnsResolver DOHRoundTripper, requestheaders ma
 		})
 		responseheaders.Set("cache-control", "public,max-age="+fmt.Sprint(minttl)+",s-maxage="+fmt.Sprint(minttl))
 	}
-	for _, rr := range res.Answer {
-		rr.Header().Ttl = uint32(math.Max(float64(minttl), float64(rr.Header().Ttl)))
-	}
+	// for _, rr := range res.Answer {
+	// 	rr.Header().Ttl = uint32(math.Max(float64(minttl), float64(rr.Header().Ttl)))
+	// }
 	buf, err = res.Pack()
 	if err != nil {
 		return &fsthttp.Response{
