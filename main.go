@@ -110,8 +110,10 @@ func DnsResolver(msg *dns.Msg, requestheaders map[string][]string) (*dns.Msg, ma
 		}), "\n"))
 	}
 
-	res = results[0]
+	// res = results[0]
+	/* 可能是dnssec的问题 */
 	res.MsgHdr.Rcode = dns.RcodeSuccess
+	res.MsgHdr.Response = true
 	for _, result := range results {
 		log.Println(result)
 	}
@@ -369,18 +371,18 @@ func handleDNSRequest(buf []byte, dnsResolver DOHRoundTripper, requestheaders ma
 
 	/* 如果数据包太大,可能有兼容性问题 */
 
-	for len(buf) > 512 {
-		//删除res.Answer的后一半的一半
-		res.Answer = res.Answer[:len(res.Answer)/2]
-		buf, err = res.Pack()
-		if err != nil {
-			return &fsthttp.Response{
-				StatusCode: http.StatusInternalServerError,
-				Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
-			}
+	// for len(buf) > 512 {
+	// 	//删除res.Answer的后一半的一半
+	// 	res.Answer = res.Answer[:len(res.Answer)/2]
+	// 	buf, err = res.Pack()
+	// 	if err != nil {
+	// 		return &fsthttp.Response{
+	// 			StatusCode: http.StatusInternalServerError,
+	// 			Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
+	// 		}
 
-		}
-	}
+	// 	}
+	// }
 	for key, values := range upstreamresponseheaders {
 		for _, v := range values {
 			responseheaders.Add("x-debug-"+key, v)
