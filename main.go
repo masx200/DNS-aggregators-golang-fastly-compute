@@ -3,6 +3,10 @@ package main
 
 import (
 	"context"
+	"io"
+	"os"
+
+	// "net/http"
 	// "io"
 	// "net/http"
 	// "net/url"
@@ -72,6 +76,21 @@ func main() {
 		// If the URL path matches the path below, then return the client IP as a JSON response.
 		// if r.URL.Path == "/api/clientIP" {
 		// Get client IP address
+
+		if r.URL.Path == "/" {
+			var file, err = os.Open("./static/index.html")
+			if err != nil {
+				log.Println(err)
+				w.WriteHeader(fsthttp.StatusNotFound)
+				w.Write([]byte("Not Found"))
+				return
+			}
+			defer file.Close()
+			w.WriteHeader(fsthttp.StatusOK)
+			w.Header().Add("content-type", "text/html")
+			io.Copy(w, file)
+			return
+		}
 		ClientIP := r.RemoteAddr
 		resp := make(map[string]any)
 		resp["request"] = map[string]any{
