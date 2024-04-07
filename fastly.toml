@@ -1,20 +1,15 @@
 # This file describes a Fastly Compute package. To learn more visit:
-
 # https://www.fastly.com/documentation/reference/compute/fastly-toml
 
 authors = ["masx200@qq.com"]
 cloned_from = "https://fiddle.fastly.dev/fiddle/4ef46d9a"
 description = "A basic starter kit that demonstrates routing, simple synthetic responses and overriding caching rules."
-
-manifest_version = 3
-
 language = "go"
-
+manifest_version = 3
 name = "DNS-aggregators-golang-fastly-compute"
-service_id = ""
-[scripts]
-env_vars = ["GOARCH=wasm", "GOOS=wasip1"]
-build = "go build -o bin/main.wasm ."
-post_init = "go get github.com/fastly/compute-sdk-go@latest"
+service_id = "nVTi2YaDnhW0SyI5QC3pT1"
 
-# https://developer.fastly.com/reference/fastly-toml/
+[scripts]
+  build = "go build -o bin/main.wasm ."
+  env_vars = ["GOARCH=wasm", "GOOS=wasip1"]
+  post_init = "go get github.com/fastly/compute-sdk-go@latest"
