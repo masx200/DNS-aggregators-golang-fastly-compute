@@ -55,6 +55,16 @@ func CreateDOHMiddleWare(dnsResolver func(msg *dns.Msg) (*dns.Msg, error), getPa
 			// )
 			return handleDNSRequest(buf, dnsResolver)
 		}
+		if contentType := r.Header.Get("Content-Type"); http.MethodPost == r.Method && contentType == "application/dns-message" {
+			buf, err := io.ReadAll(r.Body)
+			if len(buf) == 0 || err != nil {
+				return &fsthttp.Response{
+					StatusCode: http.StatusBadRequest,
+					Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusBadRequest) + "\n" + err.Error())),
+				}
+			}
+			return handleDNSRequest(buf, dnsResolver)
+		}
 		return next()
 
 	}
