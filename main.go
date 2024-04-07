@@ -1,16 +1,21 @@
-// https://developer.fastly.com/solutions/examples/client-public-ip-api-at-the-edge/
+// https://developer.fastly.com/solutions/examples/DNS-aggregators-golang-fastly-compute/
 package main
 
 import (
+	"bytes"
 	"context"
 	"io"
-	"os"
+	"net/http"
+	"strings"
 
+	// "io"
+	// "os"
+	"github.com/miekg/dns"
 	// "net/http"
 	// "io"
 	// "net/http"
 	// "net/url"
-
+	"encoding/base64"
 	// "fmt"
 	// "io"
 	"encoding/json"
@@ -22,6 +27,67 @@ import (
 
 // BackendName is the name of our service backend.
 // const BackendName = "origin_0"
+type FastlyHttpMiddleWare = func(r *fsthttp.Request, next func() *fsthttp.Response) *fsthttp.Response
+
+//	func DnsResolver(msg *dns.Msg) (res *dns.Msg, err error) {
+//		return msg, nil
+//	}
+func CreateDOHMiddleWare(dnsResolver func(msg *dns.Msg) (*dns.Msg, error), getPathname func() string) FastlyHttpMiddleWare {
+	var DohGetPost = func(r *fsthttp.Request, next func() *fsthttp.Response) *fsthttp.Response {
+		var dnsParam = r.URL.Query().Get("dns")
+		if len(dnsParam) > 0 && r.URL.Path == getPathname() && r.Method == "GET" {
+			var buf []byte
+			buf, err := base64.RawURLEncoding.DecodeString(dnsParam)
+			if len(buf) == 0 || err != nil {
+				log.Printf("dnsproxy: parsing dns request from get param %q: %v", dnsParam, err)
+				// http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+
+				return &fsthttp.Response{
+					StatusCode: http.StatusBadRequest,
+					Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusBadRequest) + "\n" + err.Error())),
+				}
+			}
+			req := &dns.Msg{}
+			if err = req.Unpack(buf); err != nil {
+				log.Printf("dnsproxy: unpacking http msg: %s", err)
+				// http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+
+				return &fsthttp.Response{
+					StatusCode: http.StatusBadRequest,
+					Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusBadRequest) + "\n" + err.Error())),
+				}
+			}
+			res, err := dnsResolver(req)
+			if err != nil {
+				// http.Error(
+				// 	w,
+				// 	fmt.Sprintf("internal error: %s", err),
+				// 	http.StatusInternalServerError,
+				// )
+				return &fsthttp.Response{
+					StatusCode: http.StatusInternalServerError,
+					Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
+				}
+			}
+			buf, err = res.Pack()
+			if err != nil {
+				return &fsthttp.Response{
+					StatusCode: http.StatusInternalServerError,
+					Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
+				}
+
+			}
+			return &fsthttp.Response{
+				StatusCode: http.StatusOK,
+				Header:     fsthttp.Header{"Content-Type": []string{"application/dns-message"}},
+				Body:       io.NopCloser(bytes.NewReader(buf)),
+			}
+		}
+		return next()
+
+	}
+	return DohGetPost
+}
 
 func main() {
 	fsthttp.ServeFunc(func(ctx context.Context, w fsthttp.ResponseWriter, r *fsthttp.Request) {
@@ -77,20 +143,20 @@ func main() {
 		// if r.URL.Path == "/api/clientIP" {
 		// Get client IP address
 
-		if r.URL.Path == "/" {
-			var file, err = os.Open("./static/index.html")
-			if err != nil {
-				log.Println(err)
-				w.WriteHeader(fsthttp.StatusNotFound)
-				w.Write([]byte("Not Found\n" + err.Error()))
-				return
-			}
-			defer file.Close()
-			w.WriteHeader(fsthttp.StatusOK)
-			w.Header().Add("content-type", "text/html")
-			io.Copy(w, file)
-			return
-		}
+		// if r.URL.Path == "/" {
+		// 	var file, err = os.Open("./static/index.html")
+		// 	if err != nil {
+		// 		log.Println(err)
+		// 		w.WriteHeader(fsthttp.StatusNotFound)
+		// 		w.Write([]byte("Not Found\n" + err.Error()))
+		// 		return
+		// 	}
+		// 	defer file.Close()
+		// 	w.WriteHeader(fsthttp.StatusOK)
+		// 	w.Header().Add("content-type", "text/html")
+		// 	io.Copy(w, file)
+		// 	return
+		// }
 		ClientIP := r.RemoteAddr
 		resp := make(map[string]any)
 		resp["request"] = map[string]any{
