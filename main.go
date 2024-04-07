@@ -149,7 +149,11 @@ func ArrayFlat[T any](arr [][]T) []T {
 	}
 
 	return result
-}
+} // ArrayMap 函数接收一个数组和一个函数作为参数，将数组中的每个元素通过函数进行转换，并返回转换后的新数组。
+// [T any] 和 [U any] 表示函数可以接受任何类型的数组和转换函数。
+// arr 参数是待处理的数组。
+// fn 参数是一个函数，用于对数组中的每个元素进行处理并返回一个新的值。
+// 返回值是转换后的新数组。
 func ArrayMap[T any, U any](arr []T, fn func(T) U) []U {
 	result := make([]U, len(arr))
 
@@ -159,9 +163,20 @@ func ArrayMap[T any, U any](arr []T, fn func(T) U) []U {
 
 	return result
 }
-func UniqBy[T any](arr []T, fn func(T) string) []T {
+
+// UniqBy 函数通过指定的函数 fn 对切片 arr 中的元素进行去重处理。
+//
+// 参数:
+// T any - arr 切片元素的类型，该类型可以是任意类型。
+// Y comparable - fn 函数返回值的类型，该类型需要可比较。
+// arr []T - 需要进行去重处理的切片。
+// fn func(T) Y - 一个函数，用于从 arr 的每个元素中提取一个关键值（key），该关键值用于去重判断。
+//
+// 返回值:
+// []T - 去重后的切片，保留了 arr 中第一次出现的每个元素。
+func UniqBy[T any, Y comparable](arr []T, fn func(T) Y) []T {
 	result := make([]T, 0)
-	seen := make(map[string]bool)
+	seen := make(map[Y]bool)
 
 	for _, v := range arr {
 		key := fn(v)
