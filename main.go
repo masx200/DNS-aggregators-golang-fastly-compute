@@ -255,7 +255,7 @@ func handleDNSRequest(buf []byte, dnsResolver func(msg *dns.Msg) (*dns.Msg, erro
 	}
 	headers := fsthttp.Header{"Content-Type": []string{"application/dns-message"}}
 	var minttl = 600
-	dohminttl, err := GetDOH_Min_TTL()
+	dohminttl, err := GetDOH_MINTTL()
 	if err != nil {
 		log.Println(err)
 	} else {
@@ -438,13 +438,13 @@ func GetDOH_ENDPOINT() []string {
 	}
 
 }
-func GetDOH_Min_TTL() (int, error) {
+func GetDOH_MINTTL() (int, error) {
 	var store, err = secretstore.Open("DNS-aggregators-golang-fastly-compute")
 	if err != nil {
 		log.Println(err)
 		return 0, err
 	}
-	s, err := store.Get("DOH_Min_TTL")
+	s, err := store.Get("DOH_MINTTL")
 	if err != nil {
 		log.Println(err)
 		return 0, err
@@ -457,5 +457,26 @@ func GetDOH_Min_TTL() (int, error) {
 	str := string(v)
 
 	return (strconv.Atoi(str))
+
+}
+func GetDOH_PATHNAME() (string, error) {
+	var store, err = secretstore.Open("DNS-aggregators-golang-fastly-compute")
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	s, err := store.Get("DOH_PATHNAME")
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	v, err := s.Plaintext()
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	str := string(v)
+
+	return (str), nil
 
 }
