@@ -74,7 +74,7 @@ func CreateDOHMiddleWare(dnsResolver func(msg *dns.Msg) (*dns.Msg, error), getPa
 	}
 	return DohGetPost
 }
-func DohClient(msg *dns.Msg, dohServerURL string) (r *dns.Msg, err error) {
+func DohClient(msg *dns.Msg, dohServerURL string) (*dns.Msg, error) {
 	/* 为了doh的缓存,需要设置id为0 ,可以缓存*/
 	msg.Id = 0
 	body, err := msg.Pack()
@@ -83,7 +83,15 @@ func DohClient(msg *dns.Msg, dohServerURL string) (r *dns.Msg, err error) {
 		return nil, err
 	}
 	//http request doh
-	res, err := http.Post(dohServerURL, "application/dns-message", strings.NewReader(string(body)))
+	req, err := fsthttp.NewRequest(http.MethodGet, dohServerURL, nil)
+	if err != nil {
+		log.Println(dohServerURL, err)
+		return nil, err
+	}
+	var query = req.URL.Query()
+	query.Add("dns", base64.RawURLEncoding.EncodeToString(body))
+	req.URL.RawQuery = query.Encode()
+	res, err := req.Send(context.Background(), req.Host)
 	if err != nil {
 		log.Println(dohServerURL, err)
 		return nil, err
