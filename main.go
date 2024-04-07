@@ -347,7 +347,17 @@ func main() {
 
 		var notfound = false
 
-		var response = CreateDOHMiddleWare(DnsResolver, func() string { return "/" })(r, func() *fsthttp.Response {
+		var response = CreateDOHMiddleWare(DnsResolver, func() string {
+
+			var PATHNAME, err = GetDOH_PATHNAME()
+			if err != nil {
+				log.Println(err)
+				return "/"
+			} else {
+				return PATHNAME
+			}
+			// return "/"
+		})(r, func() *fsthttp.Response {
 			notfound = true
 			return &fsthttp.Response{StatusCode: fsthttp.StatusNotFound}
 		})
