@@ -344,46 +344,65 @@ func main() {
 		// 	io.Copy(w, file)
 		// 	return
 		// }
-		ClientIP := r.RemoteAddr
-		resp := make(map[string]any)
-		resp["request"] = map[string]any{
-			"method":  r.Method,
-			"url":     r.URL.String(),
-			"headers": r.Header,
+
+		var notfound = false
+
+		var response = CreateDOHMiddleWare(DnsResolver, func() string { return "/" })(r, func() *fsthttp.Response {
+			notfound = true
+			return &fsthttp.Response{StatusCode: fsthttp.StatusNotFound}
+		})
+		if notfound {
+			ClientIP := r.RemoteAddr
+			resp := make(map[string]any)
+			resp["request"] = map[string]any{
+				"method":  r.Method,
+				"url":     r.URL.String(),
+				"headers": r.Header,
+			}
+
+			resp["client"] = map[string]any{"address": ClientIP}
+
+			// resp]["Address"] = ClientIP
+			JsonResp, err := json.Marshal(resp)
+			if err != nil {
+				log.Printf("Error happened in JSON marshal. Err: %s", err)
+				// http.Error(
+				// 	w,
+				// 	fmt.Sprintf("internal error: %s", err),
+				// 	http.StatusInternalServerError,
+				// )
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprintln(w, err)
+				return
+			}
+			w.Write(JsonResp)
+			w.Header().Set("Content-Type", "application/json")
+			// Return 200 OK response
+			w.WriteHeader(fsthttp.StatusOK)
+			//return
+
+			// }
+			// resp, err := r.Send(ctx, BackendName)
+			// if err != nil {
+			// 	w.WriteHeader(fsthttp.StatusBadGateway)
+			// 	fmt.Fprintln(w, err.Error())
+			// 	return
+			// }
+
+			// w.Header().Reset(resp.Header)
+			// w.WriteHeader(resp.StatusCode)
+			// io.Copy(w, resp.Body)
+		} else {
+			w.WriteHeader(response.StatusCode)
+			for header, values := range response.Header {
+				for _, value := range values {
+					w.Header().Add(header, value)
+				}
+			}
+			defer response.Body.Close()
+			io.Copy(w, response.Body)
 		}
 
-		resp["client"] = map[string]any{"address": ClientIP}
-
-		// resp]["Address"] = ClientIP
-		JsonResp, err := json.Marshal(resp)
-		if err != nil {
-			log.Printf("Error happened in JSON marshal. Err: %s", err)
-			// http.Error(
-			// 	w,
-			// 	fmt.Sprintf("internal error: %s", err),
-			// 	http.StatusInternalServerError,
-			// )
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintln(w, err)
-			return
-		}
-		w.Write(JsonResp)
-		w.Header().Set("Content-Type", "application/json")
-		// Return 200 OK response
-		w.WriteHeader(fsthttp.StatusOK)
-		//return
-
-		// }
-		// resp, err := r.Send(ctx, BackendName)
-		// if err != nil {
-		// 	w.WriteHeader(fsthttp.StatusBadGateway)
-		// 	fmt.Fprintln(w, err.Error())
-		// 	return
-		// }
-
-		// w.Header().Reset(resp.Header)
-		// w.WriteHeader(resp.StatusCode)
-		// io.Copy(w, resp.Body)
 	})
 }
 func GetDOH_ENDPOINT() []string {
