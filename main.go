@@ -82,7 +82,7 @@ func main() {
 			if err != nil {
 				log.Println(err)
 				w.WriteHeader(fsthttp.StatusNotFound)
-				w.Write([]byte("Not Found"))
+				w.Write([]byte("Not Found\n" + err.Error()))
 				return
 			}
 			defer file.Close()
