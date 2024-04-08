@@ -434,6 +434,15 @@ func handleDNSRequest(reqbuf []byte, dnsResolver DOHRoundTripper, requestheaders
 	}
 	log.Println("handleDNSRequest", res.String())
 	log.Println("handleDNSRequest", responseheaders)
+	/* 修改dns结果后要重新生成buffer */
+	resbuf, err = res.Pack()
+	if err != nil {
+		return &fsthttp.Response{
+			StatusCode: http.StatusInternalServerError,
+			Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
+		}
+
+	}
 	responseheaders.Set("content-length", fmt.Sprint(len(resbuf)))
 	return &fsthttp.Response{
 		StatusCode: http.StatusOK,
