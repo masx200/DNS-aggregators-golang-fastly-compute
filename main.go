@@ -432,8 +432,7 @@ func handleDNSRequest(reqbuf []byte, dnsResolver DOHRoundTripper, requestheaders
 			responseheaders.Add("x-debug-"+key, v)
 		}
 	}
-	log.Println("handleDNSRequest", res.String())
-	log.Println("handleDNSRequest", responseheaders)
+
 	/* 修改dns结果后要重新生成buffer */
 	resbuf, err = res.Pack()
 	if err != nil {
@@ -444,6 +443,8 @@ func handleDNSRequest(reqbuf []byte, dnsResolver DOHRoundTripper, requestheaders
 
 	}
 	responseheaders.Set("content-length", fmt.Sprint(len(resbuf)))
+	log.Println("handleDNSRequest", res.String())
+	log.Println("handleDNSRequest", responseheaders)
 	return &fsthttp.Response{
 		StatusCode: http.StatusOK,
 		Header:     responseheaders,
