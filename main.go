@@ -407,6 +407,7 @@ func handleDNSRequest(reqbuf []byte, dnsResolver DOHRoundTripper, requestheaders
 	}
 	log.Println("handleDNSRequest", res.String())
 	log.Println("handleDNSRequest", responseheaders)
+	responseheaders.Set("content-length", fmt.Sprint(len(resbuf)))
 	return &fsthttp.Response{
 		StatusCode: http.StatusOK,
 		Header:     responseheaders,
