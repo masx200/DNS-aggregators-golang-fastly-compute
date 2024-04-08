@@ -151,6 +151,7 @@ func DnsResolver(msg *dns.Msg, requestheaders map[string][]string) (*dns.Msg, ma
 
 	/* 需要 RecursionAvailable,否则客户端可能报错*/
 	res.MsgHdr.RecursionAvailable = true
+	res.Ns = results[0].Ns
 	return res, responseheaders, nil
 } // ArrayReduce 函数用于将数组中的元素逐步减少到一个单一的值，
 // 通过应用一个提供的函数到数组的每个元素上，并将结果累积。
@@ -279,6 +280,7 @@ func CreateDOHMiddleWare(dnsResolver DOHRoundTripper, getPathname func() string)
 // *dns.Msg: 指向接收到的DNS响应消息的指针。
 // error: 如果在发送查询或处理响应时遇到错误，则返回错误信息；否则返回nil。
 func DohClient(msg *dns.Msg, dohServerURL string, requestheaders map[string][]string) (*dns.Msg, map[string][]string, error) {
+	log.Println("dohClient", dohServerURL)
 	/* 为了doh的缓存,需要设置id为0 ,可以缓存*/
 	msg.Id = 0
 	body, err := msg.Pack()
@@ -326,6 +328,8 @@ func DohClient(msg *dns.Msg, dohServerURL string, requestheaders map[string][]st
 		log.Println(dohServerURL, err)
 		return nil, nil, err
 	}
+	log.Println(resp.String())
+	log.Println(res.Header)
 	return resp, res.Header, nil
 }
 
@@ -401,6 +405,8 @@ func handleDNSRequest(reqbuf []byte, dnsResolver DOHRoundTripper, requestheaders
 			responseheaders.Add("x-debug-"+key, v)
 		}
 	}
+	log.Println("handleDNSRequest", res.String())
+	log.Println("handleDNSRequest", responseheaders)
 	return &fsthttp.Response{
 		StatusCode: http.StatusOK,
 		Header:     responseheaders,
