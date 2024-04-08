@@ -68,7 +68,7 @@ type DNSResult struct {
 // error - 解析过程中发生的错误（如果有）。
 func DnsResolver(msg *dns.Msg, requestheaders map[string][]string) (*dns.Msg, map[string][]string, error) {
 	var err error
-	var res = msg
+	// var res = msg
 	dohendpoions, err := GetDOH_ENDPOINT()
 	if len(dohendpoions) == 0 || err != nil {
 		log.Println("DOH_ENDPOINT is empty or error " + err.Error())
@@ -110,12 +110,13 @@ func DnsResolver(msg *dns.Msg, requestheaders map[string][]string) (*dns.Msg, ma
 		}), "\n"))
 	}
 
-	res = results[0]
+	// res = results[0]
 	/* 可能是dnssec的问题 */
+	var res = msg.Copy()
 	res.MsgHdr.Rcode = dns.RcodeSuccess
 	res.MsgHdr.Response = true
-	res.Ns = results[0].Ns
-	res.Extra = results[0].Extra
+	// res.Ns = results[0].Ns
+	// res.Extra = results[0].Extra
 	for _, result := range results {
 		log.Println(result)
 	}
