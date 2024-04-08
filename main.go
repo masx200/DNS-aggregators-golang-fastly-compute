@@ -403,9 +403,17 @@ func handleDNSRequest(reqbuf []byte, dnsResolver DOHRoundTripper, requestheaders
 		}
 
 	}
+	//提取cname 记录
 
+	var cnames = ArrayFilter(res.Answer, func(rr dns.RR) bool {
+		return rr.Header().Rrtype == dns.TypeCNAME
+	})
+	var others = ArrayFilter(res.Answer, func(rr dns.RR) bool {
+		return rr.Header().Rrtype != dns.TypeCNAME
+	})
+	res.Answer = others
 	/* 如果数据包太大,可能有兼容性问题 */
-
+	/* 不能少了cname,否则会报错 */
 	for len(resbuf) > 512 {
 		//删除res.Answer的后一半的一半
 		res.Answer = res.Answer[:len(res.Answer)/2]
@@ -418,6 +426,7 @@ func handleDNSRequest(reqbuf []byte, dnsResolver DOHRoundTripper, requestheaders
 
 		}
 	}
+	res.Answer = append(res.Answer, cnames...)
 	for key, values := range upstreamresponseheaders {
 		for _, v := range values {
 			responseheaders.Add("x-debug-"+key, v)
@@ -702,4 +711,14 @@ func Forwarded() FastlyHttpMiddleWare {
 		r.Header.Add("Forwarded", forwarded)
 		return next(r)
 	}
+}
+
+func ArrayFilter[T any](arr []T, callback func(T) bool) []T {
+	var result []T
+	for _, v := range arr {
+		if callback(v) {
+			result = append(result, v)
+		}
+	}
+	return result
 }
