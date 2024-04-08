@@ -112,7 +112,16 @@ func DnsResolver(msg *dns.Msg, requestheaders map[string][]string) (*dns.Msg, ma
 	//只处理A和aaaa记录
 
 	if !(msg.Question[0].Qtype == dns.TypeA || msg.Question[0].Qtype == dns.TypeAAAA) {
-		return results[0], headers[0], nil
+		var index = 0
+
+		for i := 0; i < len(results); i++ {
+			if len(results[i].Answer) > len(results[index].Answer) {
+
+				index = i
+
+			}
+		}
+		return results[index], headers[index], nil
 	}
 	// res = results[0]
 	/* 可能是dnssec的问题 */
