@@ -360,10 +360,10 @@ func handleDNSRequest(buf []byte, dnsResolver DOHRoundTripper, requestheaders ma
 	var minttl2 = minttl
 	if len(res.Answer) > 0 {
 
-		minttl = int(math.Max(float64(minttl), float64(ArrayReduce(res.Answer, res.Answer[0].Header().Ttl, func(acc uint32, v dns.RR) uint32 {
+		var minttl3 = int(math.Max(float64(minttl), float64(ArrayReduce(res.Answer, res.Answer[0].Header().Ttl, func(acc uint32, v dns.RR) uint32 {
 			return uint32(math.Min(float64(acc), float64(v.Header().Ttl)))
 		}))))
-		responseheaders.Set("cache-control", "public,max-age="+fmt.Sprint(minttl)+",s-maxage="+fmt.Sprint(minttl))
+		responseheaders.Set("cache-control", "public,max-age="+fmt.Sprint(minttl3)+",s-maxage="+fmt.Sprint(minttl3))
 	}
 	for _, rr := range res.Answer {
 		rr.Header().Ttl = uint32(math.Max(float64(minttl2), float64(rr.Header().Ttl)))
