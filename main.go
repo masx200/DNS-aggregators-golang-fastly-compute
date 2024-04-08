@@ -148,8 +148,16 @@ func DnsResolver(msg *dns.Msg, requestheaders map[string][]string) (*dns.Msg, ma
 		rr.Header().Ttl = oldttl
 		return rrstr
 	})
-	res.Answer = RandomShuffle(messages)
-
+	res.Answer = messages
+	var cnames = ArrayFilter(res.Answer, func(rr dns.RR) bool {
+		return rr.Header().Rrtype == dns.TypeCNAME
+	})
+	var others = ArrayFilter(res.Answer, func(rr dns.RR) bool {
+		return rr.Header().Rrtype != dns.TypeCNAME
+	})
+	//RandomShuffle(messages)
+	/* 不能修改cname的顺序,否则会报错 */
+	res.Answer = append(cnames, RandomShuffle(others)...)
 	var responseheaders = http.Header{}
 	for _, header := range headers {
 		for k, values := range header {
