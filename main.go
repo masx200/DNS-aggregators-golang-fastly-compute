@@ -109,7 +109,11 @@ func DnsResolver(msg *dns.Msg, requestheaders map[string][]string) (*dns.Msg, ma
 			return err.Error()
 		}), "\n"))
 	}
+	//只处理A和aaaa记录
 
+	if !(msg.Question[0].Qtype == dns.TypeA || msg.Question[0].Qtype == dns.TypeAAAA) {
+		return results[0], headers[0], nil
+	}
 	// res = results[0]
 	/* 可能是dnssec的问题 */
 	var res = msg.Copy()
@@ -356,7 +360,21 @@ func handleDNSRequest(reqbuf []byte, dnsResolver DOHRoundTripper, requestheaders
 			Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
 		}
 	}
+	if !(req.Question[0].Qtype == dns.TypeA || req.Question[0].Qtype == dns.TypeAAAA) {
+		resbuf, err := res.Pack()
+		if err != nil {
+			return &fsthttp.Response{
+				StatusCode: http.StatusInternalServerError,
+				Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
+			}
 
+		}
+		return &fsthttp.Response{
+			StatusCode: http.StatusOK,
+			Header:     upstreamresponseheaders,
+			Body:       io.NopCloser(bytes.NewReader(resbuf)),
+		}
+	}
 	responseheaders := fsthttp.Header{}
 	responseheaders.Set("Content-Type", "application/dns-message")
 	var minttl = 600
