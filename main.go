@@ -333,10 +333,10 @@ func DohClient(msg *dns.Msg, dohServerURL string, requestheaders map[string][]st
 // buf []byte: 包含DNS请求数据的字节切片
 // dnsResolver func(msg *dns.Msg) (*dns.Msg, error): 一个函数，用于解析DNS请求并返回响应
 // 返回值 *fsthttp.Response: 返回一个HTTP响应，包含DNS响应数据或错误信息
-func handleDNSRequest(buf []byte, dnsResolver DOHRoundTripper, requestheaders map[string][]string) *fsthttp.Response {
+func handleDNSRequest(reqbuf []byte, dnsResolver DOHRoundTripper, requestheaders map[string][]string) *fsthttp.Response {
 	var err error
 	req := &dns.Msg{}
-	if err = req.Unpack(buf); err != nil {
+	if err = req.Unpack(reqbuf); err != nil {
 		log.Printf("dnsproxy: unpacking http msg: %s", err)
 
 		return &fsthttp.Response{
@@ -373,7 +373,7 @@ func handleDNSRequest(buf []byte, dnsResolver DOHRoundTripper, requestheaders ma
 	for _, rr := range res.Answer {
 		rr.Header().Ttl = uint32(math.Max(float64(minttl2), float64(rr.Header().Ttl)))
 	}
-	buf, err = res.Pack()
+	resbuf, err := res.Pack()
 	if err != nil {
 		return &fsthttp.Response{
 			StatusCode: http.StatusInternalServerError,
@@ -384,10 +384,10 @@ func handleDNSRequest(buf []byte, dnsResolver DOHRoundTripper, requestheaders ma
 
 	/* 如果数据包太大,可能有兼容性问题 */
 
-	for len(buf) > 512 {
+	for len(resbuf) > 512 {
 		//删除res.Answer的后一半的一半
 		res.Answer = res.Answer[:len(res.Answer)/2]
-		buf, err = res.Pack()
+		resbuf, err = res.Pack()
 		if err != nil {
 			return &fsthttp.Response{
 				StatusCode: http.StatusInternalServerError,
@@ -404,7 +404,7 @@ func handleDNSRequest(buf []byte, dnsResolver DOHRoundTripper, requestheaders ma
 	return &fsthttp.Response{
 		StatusCode: http.StatusOK,
 		Header:     responseheaders,
-		Body:       io.NopCloser(bytes.NewReader(buf)),
+		Body:       io.NopCloser(bytes.NewReader(resbuf)),
 	}
 }
 
