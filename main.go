@@ -356,16 +356,17 @@ func handleDNSRequest(buf []byte, dnsResolver DOHRoundTripper, requestheaders ma
 	} else {
 		minttl = dohminttl
 	}
+	var minttl2 = minttl
 	if len(res.Answer) > 0 {
 
-		minttl = ArrayReduce(res.Answer, minttl, func(acc int, v dns.RR) int {
-			return int(math.Max(float64(acc), float64(v.Header().Ttl)))
-		})
+		minttl = int(math.Max(float64(minttl), float64(ArrayReduce(res.Answer, res.Answer[0].Header().Ttl, func(acc uint32, v dns.RR) uint32 {
+			return uint32(math.Min(float64(acc), float64(v.Header().Ttl)))
+		}))))
 		responseheaders.Set("cache-control", "public,max-age="+fmt.Sprint(minttl)+",s-maxage="+fmt.Sprint(minttl))
 	}
-	// for _, rr := range res.Answer {
-	// 	rr.Header().Ttl = uint32(math.Max(float64(minttl), float64(rr.Header().Ttl)))
-	// }
+	for _, rr := range res.Answer {
+		rr.Header().Ttl = uint32(math.Max(float64(minttl2), float64(rr.Header().Ttl)))
+	}
 	buf, err = res.Pack()
 	if err != nil {
 		return &fsthttp.Response{
