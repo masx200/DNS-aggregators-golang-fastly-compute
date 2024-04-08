@@ -426,7 +426,8 @@ func handleDNSRequest(reqbuf []byte, dnsResolver DOHRoundTripper, requestheaders
 
 		}
 	}
-	res.Answer = append(res.Answer, cnames...)
+	/* 测试是不是要把cname放在前面 */
+	res.Answer = append(cnames, res.Answer...)
 	for key, values := range upstreamresponseheaders {
 		for _, v := range values {
 			responseheaders.Add("x-debug-"+key, v)
