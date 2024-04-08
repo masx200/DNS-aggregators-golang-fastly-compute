@@ -148,6 +148,7 @@ func DnsResolver(msg *dns.Msg, requestheaders map[string][]string) (*dns.Msg, ma
 	}
 	/* 删掉  Holds the RR(s) of the additional section.防止dnssec报错*/
 	res.Extra = []dns.RR{}
+	res.MsgHdr.RecursionAvailable = true
 	return res, responseheaders, nil
 } // ArrayReduce 函数用于将数组中的元素逐步减少到一个单一的值，
 // 通过应用一个提供的函数到数组的每个元素上，并将结果累积。
