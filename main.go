@@ -66,7 +66,7 @@ func ServeStatic(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Resp
 			Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
 		}
 	}
-	log.Println(r.URL.Path, decodedString)
+	log.Println("path:", r.URL.Path, "decoded:", decodedString)
 	var file, ok1 = filemap[decodedString]
 	var contenttype, ok2 = typemap[decodedString]
 	if file != nil && ok2 && ok1 {
@@ -367,6 +367,9 @@ func DohClient(msg *dns.Msg, dohServerURL string, requestheaders map[string][]st
 	query.Add("dns", base64.RawURLEncoding.EncodeToString(body))
 	req.URL.RawQuery = query.Encode()
 	req.Header = requestheaders
+	req.CacheOptions = fsthttp.CacheOptions{
+		SurrogateKey: req.URL.String(),
+	}
 	res, err := req.Send(context.Background(), req.Host)
 	if err != nil {
 		log.Println(dohServerURL, err)
@@ -536,7 +539,8 @@ func handleDNSRequest(reqbuf []byte, dnsResolver DOHRoundTripper, requestheaders
 
 func main() {
 	fsthttp.ServeFunc(func(ctx context.Context, w fsthttp.ResponseWriter, r *fsthttp.Request) {
-
+		log.Println(r.URL, r.Method)
+		log.Println(r.Header)
 		w.Header().Add("Alt-Svc", "h3=\":443\"; ma=86400")
 		w.Header().Add("Alt-Svc", "h2=\":443\"; ma=86400")
 		w.Header().Add("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
