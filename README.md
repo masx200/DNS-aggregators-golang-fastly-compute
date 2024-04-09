@@ -77,3 +77,5 @@ security-related issues.
 # 设置doh服务的最小ttl(秒)
 
 在resources的`secret-stores`里面设置名称为"DNS-aggregators-golang-fastly-compute"的`secret stores`里面的"DOH_MINTTL"为"600".
+
+为了解决浏览器对于cname记录重复的不兼容问题,需要把cname记录进行展平.
