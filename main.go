@@ -428,6 +428,17 @@ func handleDNSRequest(reqbuf []byte, dnsResolver DOHRoundTripper, requestheaders
 	var others = ArrayFilter(res.Answer, func(rr dns.RR) bool {
 		return rr.Header().Rrtype != dns.TypeCNAME
 	})
+
+	/* cname展平操作 */
+
+	if len(cnames) > 1 && len(others) > 0 {
+		var recordname = others[0].Header().Name
+		for _, o := range others {
+			o.Header().Name = recordname
+		}
+		cnames = []dns.RR{&dns.CNAME{Hdr: dns.RR_Header{Name: req.Question[0].Name, Rrtype: dns.TypeCNAME, Class: req.Question[0].Qclass, Ttl: uint32(minttl)}, Target: recordname}}
+	}
+
 	res.Answer = others
 	/* 如果数据包太大,可能有兼容性问题 */
 	/* 不能少了cname,否则会报错 */
