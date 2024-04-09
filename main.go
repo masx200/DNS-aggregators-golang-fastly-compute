@@ -11,6 +11,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -37,6 +38,9 @@ import (
 //go:embed static/index.html
 var indexhtmlByte []byte
 
+//go:embed static/favicon.ico
+var faviconByte []byte
+
 //go:embed static/a8850f4365c46ec1.jpg_结果.webp
 var a8850f4365c46ec1webp []byte
 
@@ -45,15 +49,26 @@ var EIse2e8XUAUWt8webp []byte
 
 func ServeStatic(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Response) *fsthttp.Response {
 	var filemap = map[string][]byte{
-		"/": indexhtmlByte,
-		"/static/a8850f4365c46ec1.jpg_结果.webp": a8850f4365c46ec1webp,
-		"/static/EIse2e8XUAUWt8_结果.webp":       EIse2e8XUAUWt8webp}
+		"/":                             indexhtmlByte,
+		"/favicon.ico":                  faviconByte,
+		"/a8850f4365c46ec1.jpg_结果.webp": a8850f4365c46ec1webp,
+		"/EIse2e8XUAUWt8_结果.webp":       EIse2e8XUAUWt8webp}
 	var typemap = map[string]string{
-		"/": "text/html",
-		"/static/a8850f4365c46ec1.jpg_结果.webp": "image/webp",
-		"/static/EIse2e8XUAUWt8_结果.webp":       "image/webp"}
-	var file, ok1 = filemap[r.URL.Path]
-	var contenttype, ok2 = typemap[r.URL.Path]
+		"/":                             "text/html",
+		"/favicon.ico":                  "image/x-icon",
+		"/a8850f4365c46ec1.jpg_结果.webp": "image/webp",
+		"/EIse2e8XUAUWt8_结果.webp":       "image/webp"}
+	decodedString, err := url.QueryUnescape(r.URL.Path)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return &fsthttp.Response{
+			StatusCode: http.StatusInternalServerError,
+			Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
+		}
+	}
+	log.Println(r.URL.Path, decodedString)
+	var file, ok1 = filemap[decodedString]
+	var contenttype, ok2 = typemap[decodedString]
 	if file != nil && ok2 && ok1 {
 		return &fsthttp.Response{
 			StatusCode: 200,
