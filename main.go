@@ -926,7 +926,7 @@ func DohClientWithCache(msg *dns.Msg, dohServerURL string, requestheaders map[st
 		log.Println(dohServerURL, err)
 		return nil, nil, err
 	}
-	var minttl3 = minttl
+	ttlresult = minttl
 	if len(res.Answer) > 0 {
 		var minttl3 = int(math.Max(float64(minttl), float64(ArrayReduce(res.Answer, res.Answer[0].Header().Ttl, func(acc uint32, v dns.RR) uint32 {
 			return uint32(math.Min(float64(acc), float64(v.Header().Ttl)))
@@ -938,6 +938,6 @@ func DohClientWithCache(msg *dns.Msg, dohServerURL string, requestheaders map[st
 	} else {
 		responseheaders.Add("Cache-Status", "FastlyComputeCache "+http.Header(requestheaders).Get("host")+";key="+keyhex+";stored;ttl="+strconv.Itoa(ttlresult)+";fwd=miss;fwd-status=200")
 	}
-	responseheaders.Set("cache-control", "public,max-age="+fmt.Sprint(minttl3)+",s-maxage="+fmt.Sprint(minttl3))
+	responseheaders.Add("cache-control", "public,max-age="+fmt.Sprint(ttlresult)+",s-maxage="+fmt.Sprint(ttlresult))
 	return res, responseheaders, nil
 }
