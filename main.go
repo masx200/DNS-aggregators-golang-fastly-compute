@@ -431,7 +431,7 @@ func handleDNSRequest(reqbuf []byte, dnsResolver DOHRoundTripper, requestheaders
 	res.Answer = others
 	/* 如果数据包太大,可能有兼容性问题 */
 	/* 不能少了cname,否则会报错 */
-	for len(resbuf) > 512 {
+	for len(resbuf) > 1024 {
 		//删除res.Answer的后一半的一半
 		res.Answer = res.Answer[:len(res.Answer)/2]
 		resbuf, err = res.Pack()
