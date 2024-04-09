@@ -131,7 +131,7 @@ func DnsResolver(msg *dns.Msg, requestheaders map[string][]string) (*dns.Msg, ma
 
 	for _, doh := range dohendpoions {
 		go func(doh string) {
-			var res, header, err = DohClient(msg, doh, requestheaders)
+			var res, header, err = DohClientWithCache(msg, doh, requestheaders)
 			waitchan <- &DNSResult{
 				Msg:    res,
 				Err:    err,
@@ -368,6 +368,7 @@ func DohClient(msg *dns.Msg, dohServerURL string, requestheaders map[string][]st
 	}
 	var query = req.URL.Query()
 	query.Add("dns", base64.RawURLEncoding.EncodeToString(body))
+	query.Add("host", req.Host)
 	req.URL.RawQuery = query.Encode()
 	req.Header = requestheaders
 	req.CacheOptions = fsthttp.CacheOptions{
