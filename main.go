@@ -892,5 +892,6 @@ func DohClientWithCache(msg *dns.Msg, dohServerURL string, requestheaders map[st
 	} else {
 		responseheaders.Add("Cache-Status", "FastlyComputeCache "+http.Header(requestheaders).Get("host")+";key="+keyhex+";stored;ttl="+strconv.Itoa(ttlresult)+";fwd=miss;fwd-status=200")
 	}
+	responseheaders.Set("cache-control", "public,max-age="+fmt.Sprint(minttl3)+",s-maxage="+fmt.Sprint(minttl3))
 	return res, responseheaders, nil
 }
