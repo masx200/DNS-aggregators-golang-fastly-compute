@@ -8,6 +8,8 @@ DNS-aggregators-golang-fastly-compute
 
 软件架构说明
 
+对于dns请求使用了fastly compute的cdn缓存.
+
 #### 使用说明
 
 1. `fastly compute serve`
