@@ -4,6 +4,7 @@ package main
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -32,6 +33,38 @@ import (
 	"github.com/fastly/compute-sdk-go/fsthttp"
 	// "github.com/quic-go/quic-go/http3"
 )
+
+//go:embed static/index.html
+var indexhtmlByte []byte
+
+//go:embed static/a8850f4365c46ec1.jpg_结果.webp
+var a8850f4365c46ec1webp []byte
+
+//go:embed static/EIse2e8XUAUWt8_结果.webp
+var EIse2e8XUAUWt8webp []byte
+
+func ServeStatic(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Response) *fsthttp.Response {
+	var filemap = map[string][]byte{
+		"/": indexhtmlByte,
+		"/static/a8850f4365c46ec1.jpg_结果.webp": a8850f4365c46ec1webp,
+		"/static/EIse2e8XUAUWt8_结果.webp":       EIse2e8XUAUWt8webp}
+	var typemap = map[string]string{
+		"/": "text/html",
+		"/static/a8850f4365c46ec1.jpg_结果.webp": "image/webp",
+		"/static/EIse2e8XUAUWt8_结果.webp":       "image/webp"}
+	var file, ok1 = filemap[r.URL.Path]
+	var contenttype, ok2 = typemap[r.URL.Path]
+	if file != nil && ok2 && ok1 {
+		return &fsthttp.Response{
+			StatusCode: 200,
+			Header:     fsthttp.Header{"Content-Type": []string{contenttype}},
+			Body:       io.NopCloser(bytes.NewReader(file)),
+		}
+	} else {
+		return next(r)
+	}
+
+}
 
 // BackendName is the name of our service backend.
 // const BackendName = "origin_0"
@@ -568,9 +601,13 @@ func main() {
 					return PATHNAME
 				}
 				// return "/"
-			})(r, func(*fsthttp.Request) *fsthttp.Response {
+			})(r, func(r *fsthttp.Request) *fsthttp.Response {
+
+				return ServeStatic(r, func(r *fsthttp.Request) *fsthttp.Response {
+					return &fsthttp.Response{StatusCode: fsthttp.StatusNotFound}
+				})
 				// notfound = true
-				return &fsthttp.Response{StatusCode: fsthttp.StatusNotFound}
+
 			})
 		})
 		if /* notfound && */ response.StatusCode == fsthttp.StatusNotFound {
