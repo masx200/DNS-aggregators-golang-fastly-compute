@@ -831,7 +831,13 @@ func DohClientWithCache(msg *dns.Msg, dohServerURL string, requestheaders map[st
 		return nil, nil, err
 	}
 	var cachekey = sha512.Sum512(append([]byte(dohServerURL), body...))
-
+	var minttl = 600
+	dohminttl, err := GetDOH_MINTTL()
+	if err != nil {
+		log.Println(err)
+	} else {
+		minttl = dohminttl
+	}
 	var hit = true
 	rc, err := simple.GetOrSet(cachekey[:], func() (simple.CacheEntry, error) {
 		var entry = *new(simple.CacheEntry)
@@ -846,9 +852,12 @@ func DohClientWithCache(msg *dns.Msg, dohServerURL string, requestheaders map[st
 			return entry, err
 		}
 		responseheaders = header
+		var minttl3 = int(math.Max(float64(minttl), float64(ArrayReduce(res.Answer, res.Answer[0].Header().Ttl, func(acc uint32, v dns.RR) uint32 {
+			return uint32(math.Min(float64(acc), float64(v.Header().Ttl)))
+		}))))
 		return simple.CacheEntry{
 			Body: bytes.NewReader(body),
-			TTL:  time.Minute,
+			TTL:  time.Second * time.Duration(minttl3),
 		}, nil
 	})
 	defer rc.Close()
