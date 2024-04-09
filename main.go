@@ -793,6 +793,14 @@ func RandomShuffle[T any](arr []T) []T {
 	})
 	return arr
 }
+
+// Forwarded 创建并返回一个处理HTTP请求的Fastly中间件函数。
+// 该中间件会添加一个"Forwarded"头部，用于指示请求被转发的信息。
+//
+// 返回值:
+//
+//	FastlyHttpMiddleWare: 一个函数，接受一个fsthttp.Request指针和一个next函数，
+//	                      并返回一个fsthttp.Response指针。
 func Forwarded() FastlyHttpMiddleWare {
 	return func(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Response) *fsthttp.Response {
 		var clienthost = r.RemoteAddr
@@ -817,6 +825,16 @@ func Forwarded() FastlyHttpMiddleWare {
 	}
 }
 
+// ArrayFilter 是一个根据回调函数过滤数组元素的通用函数。
+// 它接受一个类型参数 T 的数组 arr 和一个回调函数 callback，该回调函数对每个数组元素进行测试。
+// 如果回调函数对某个元素返回 true，则该元素被加入到结果数组中。
+//
+// 参数：
+// arr []T - 需要进行过滤的数组。
+// callback func(T) bool - 用于测试每个元素的回调函数，如果该函数返回 true，则元素被包含在结果数组中。
+//
+// 返回值：
+// []T - 过滤后由满足条件的元素组成的新数组。
 func ArrayFilter[T any](arr []T, callback func(T) bool) []T {
 	var result []T
 	for _, v := range arr {
@@ -826,6 +844,18 @@ func ArrayFilter[T any](arr []T, callback func(T) bool) []T {
 	}
 	return result
 }
+
+// DohClientWithCache 在进行DNS查询时，加入了缓存机制。它会首先尝试从缓存中获取结果，如果缓存未命中，则向DOH服务器发送请求，并将结果存储到缓存中。
+//
+// 参数:
+// msg: 代表DNS查询消息的dns.Msg对象。
+// dohServerURL: DOH服务器的URL。
+// requestheaders: 发送给DOH服务器的HTTP请求头。
+//
+// 返回值:
+// *dns.Msg: 代表DNS响应消息的dns.Msg对象。
+// map[string][]string: 返回的HTTP响应头。
+// error: 如果过程中出现错误，则返回错误信息。
 func DohClientWithCache(msg *dns.Msg, dohServerURL string, requestheaders map[string][]string) (*dns.Msg, map[string][]string, error) {
 
 	responseheaders := http.Header(map[string][]string{"content-type": {"application/dns-message"}})
