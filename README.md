@@ -78,4 +78,6 @@ security-related issues.
 
 在resources的`secret-stores`里面设置名称为"DNS-aggregators-golang-fastly-compute"的`secret stores`里面的"DOH_MINTTL"为"600".
 
-为了解决浏览器对于cname记录重复的不兼容问题,需要把cname记录进行展平.
+# 关于浏览器对于cname记录的兼容性问题
+
+为了解决浏览器对于cname记录重复的不兼容问题,需要把cname记录进行展平.还要把cname记录放在其他记录前面.
