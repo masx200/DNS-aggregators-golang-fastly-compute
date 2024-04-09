@@ -50,6 +50,10 @@ var a8850f4365c46ec1webp []byte
 //go:embed static/EIse2e8XUAUWt8_结果.webp
 var EIse2e8XUAUWt8webp []byte
 
+// ServeStatic 用于处理静态文件服务的请求。
+// r: 表示客户端的请求。
+// next: 是一个函数，当当前请求的路径找不到对应的静态文件时，会调用该函数继续处理请求。
+// 返回值: 返回一个指向fsthttp.Response的指针，包含响应的状态码、头部和主体。
 func ServeStatic(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Response) *fsthttp.Response {
 	var filemap = map[string][]byte{
 		"/":                             indexhtmlByte,
@@ -98,6 +102,11 @@ func ServeStatic(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Resp
 //	*fsthttp.Response - 表示处理后的HTTP响应。
 type FastlyHttpMiddleWare = func(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Response) *fsthttp.Response
 
+// DOHRoundTripper 定义了一个自定义的 DNS Over HTTPs 请求和响应的传输器类型。
+// 它是一个函数类型，接受一个 dns.Msg 结构体指针作为请求消息，
+// 以及一个 map[string][]string 类型的 headers 作为 HTTP 请求头，
+// 并返回一个 dns.Msg 结构体指针作为响应消息，一个 map[string][]string 类型的 headers 作为 HTTP 响应头，
+// 以及一个 error 类型作为可能发生的错误。
 type DOHRoundTripper = func(msg *dns.Msg, headers map[string][]string) (*dns.Msg, map[string][]string, error)
 
 // DNSResult 结构体用于保存DNS查询的结果和可能发生的错误。
