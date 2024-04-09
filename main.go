@@ -437,6 +437,11 @@ func handleDNSRequest(reqbuf []byte, dnsResolver DOHRoundTripper, requestheaders
 			o.Header().Name = recordname
 		}
 		cnames = []dns.RR{&dns.CNAME{Hdr: dns.RR_Header{Name: req.Question[0].Name, Rrtype: dns.TypeCNAME, Class: req.Question[0].Qclass, Ttl: uint32(minttl)}, Target: recordname}}
+	} else if len(cnames) > 1 && len(others) == 0 {
+		/* 为了解决浏览器对于cname记录重复的不兼容问题,需要把cname记录进行展平.还要把cname记录放在其他记录前面,不允许出现相同名字的cname记录. */
+		cnames = UniqBy(cnames, func(rr dns.RR) string {
+			return rr.Header().Name
+		})
 	}
 
 	res.Answer = others

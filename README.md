@@ -80,4 +80,4 @@ security-related issues.
 
 # 关于浏览器对于cname记录的兼容性问题
 
-为了解决浏览器对于cname记录重复的不兼容问题,需要把cname记录进行展平.还要把cname记录放在其他记录前面.
+为了解决浏览器对于cname记录重复的不兼容问题,需要把cname记录进行展平.还要把cname记录放在其他记录前面,不允许出现相同名字的cname记录.
