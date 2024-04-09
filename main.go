@@ -8,7 +8,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"github.com/fastly/compute-sdk-go/secretstore"
 	"io"
 	"math"
 	"math/rand"
@@ -18,6 +17,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fastly/compute-sdk-go/secretstore"
+
 	// "io"
 	// "os"
 	"github.com/miekg/dns"
@@ -26,12 +27,14 @@ import (
 	// "net/http"
 	// "net/url"
 	"encoding/base64"
+	"encoding/hex"
 	// "fmt"
 	// "io"
 	"encoding/json"
+	"log"
+
 	"github.com/fastly/compute-sdk-go/cache/simple"
 	"github.com/fastly/compute-sdk-go/fsthttp"
-	"log"
 	// "github.com/quic-go/quic-go/http3"
 )
 
@@ -823,6 +826,7 @@ func ArrayFilter[T any](arr []T, callback func(T) bool) []T {
 	return result
 }
 func DohClientWithCache(msg *dns.Msg, dohServerURL string, requestheaders map[string][]string) (*dns.Msg, map[string][]string, error) {
+
 	responseheaders := http.Header(map[string][]string{"content-type": {"application/dns-message"}})
 	msg.Id = 0
 	body, err := msg.Pack()
@@ -831,6 +835,7 @@ func DohClientWithCache(msg *dns.Msg, dohServerURL string, requestheaders map[st
 		return nil, nil, err
 	}
 	var cachekey = sha512.Sum512(append([]byte(dohServerURL), body...))
+	var keyhex = hex.EncodeToString(cachekey[:])
 	var minttl = 600
 	dohminttl, err := GetDOH_MINTTL()
 	if err != nil {
@@ -839,6 +844,7 @@ func DohClientWithCache(msg *dns.Msg, dohServerURL string, requestheaders map[st
 		minttl = dohminttl
 	}
 	var hit = true
+	var ttlresult = minttl
 	rc, err := simple.GetOrSet(cachekey[:], func() (simple.CacheEntry, error) {
 		var entry = *new(simple.CacheEntry)
 		hit = false
@@ -855,23 +861,35 @@ func DohClientWithCache(msg *dns.Msg, dohServerURL string, requestheaders map[st
 		var minttl3 = int(math.Max(float64(minttl), float64(ArrayReduce(res.Answer, res.Answer[0].Header().Ttl, func(acc uint32, v dns.RR) uint32 {
 			return uint32(math.Min(float64(acc), float64(v.Header().Ttl)))
 		}))))
+		ttlresult = minttl3
 		return simple.CacheEntry{
 			Body: bytes.NewReader(body),
 			TTL:  time.Second * time.Duration(minttl3),
 		}, nil
 	})
+	if err != nil {
+		return nil, nil, err
+	}
 	defer rc.Close()
 
-	var resp = &dns.Msg{}
+	var res = &dns.Msg{}
 	buffer, err := io.ReadAll(rc)
 	if err != nil {
 		return nil, nil, err
 	}
-	err = resp.Unpack(buffer)
+	err = res.Unpack(buffer)
 	if err != nil {
 		log.Println(dohServerURL, err)
 		return nil, nil, err
 	}
-
-	return resp, responseheaders, nil
+	var minttl3 = int(math.Max(float64(minttl), float64(ArrayReduce(res.Answer, res.Answer[0].Header().Ttl, func(acc uint32, v dns.RR) uint32 {
+		return uint32(math.Min(float64(acc), float64(v.Header().Ttl)))
+	}))))
+	ttlresult = minttl3
+	if hit {
+		responseheaders.Add("Cache-Status", "FastlyComputeCache "+http.Header(requestheaders).Get("host")+";key="+keyhex+";hit;ttl="+strconv.Itoa(ttlresult))
+	} else {
+		responseheaders.Add("Cache-Status", "FastlyComputeCache "+http.Header(requestheaders).Get("host")+";key="+keyhex+";stored;ttl="+strconv.Itoa(ttlresult)+";fwd=miss;fwd-status=200")
+	}
+	return res, responseheaders, nil
 }
