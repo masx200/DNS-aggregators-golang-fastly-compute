@@ -4,9 +4,11 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha512"
 	_ "embed"
 	"errors"
 	"fmt"
+	"github.com/fastly/compute-sdk-go/secretstore"
 	"io"
 	"math"
 	"math/rand"
@@ -15,8 +17,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/fastly/compute-sdk-go/secretstore"
 
 	// "io"
 	// "os"
@@ -29,9 +29,9 @@ import (
 	// "fmt"
 	// "io"
 	"encoding/json"
-	"log"
-
+	"github.com/fastly/compute-sdk-go/cache/simple"
 	"github.com/fastly/compute-sdk-go/fsthttp"
+	"log"
 	// "github.com/quic-go/quic-go/http3"
 )
 
@@ -821,4 +821,48 @@ func ArrayFilter[T any](arr []T, callback func(T) bool) []T {
 		}
 	}
 	return result
+}
+func DohClientWithCache(msg *dns.Msg, dohServerURL string, requestheaders map[string][]string) (*dns.Msg, map[string][]string, error) {
+	responseheaders := http.Header(map[string][]string{"content-type": {"application/dns-message"}})
+	msg.Id = 0
+	body, err := msg.Pack()
+	if err != nil {
+		log.Println(dohServerURL, err)
+		return nil, nil, err
+	}
+	var cachekey = sha512.Sum512(append([]byte(dohServerURL), body...))
+
+	var hit = true
+	rc, err := simple.GetOrSet(cachekey[:], func() (simple.CacheEntry, error) {
+		var entry = *new(simple.CacheEntry)
+		hit = false
+		var res, header, err = DohClient(msg, dohServerURL, requestheaders)
+		if err != nil {
+			return entry, err
+		}
+		body, err := res.Pack()
+		if err != nil {
+			log.Println(dohServerURL, err)
+			return entry, err
+		}
+		responseheaders = header
+		return simple.CacheEntry{
+			Body: bytes.NewReader(body),
+			TTL:  time.Minute,
+		}, nil
+	})
+	defer rc.Close()
+
+	var resp = &dns.Msg{}
+	buffer, err := io.ReadAll(rc)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = resp.Unpack(buffer)
+	if err != nil {
+		log.Println(dohServerURL, err)
+		return nil, nil, err
+	}
+
+	return resp, responseheaders, nil
 }
