@@ -86,9 +86,19 @@ func ServeStatic(staticfileprefix string, embededFiles embed.FS, filehashmap map
 		if file != nil && err == nil {
 			var filehash, ok = filehashmap[decodedString]
 			if ok {
-				responseheaders.Set("etag", fmt.Sprintf("\"%s\"", filehash))
+				etag := fmt.Sprintf("\"%s\"", filehash)
+				responseheaders.Set("etag", etag)
+			} else {
+				log.Println("filehash not found", decodedString)
 			}
 			responseheaders.Set("Content-Type", ContentType) //: []string{}
+			if r.Header.Get("If-None-Match") == responseheaders.Get("etag") && len(responseheaders.Get("etag")) > 0 {
+				return &fsthttp.Response{
+					StatusCode: 304,
+					Header:     responseheaders,
+					//Body:       nil,
+				}
+			}
 			return &fsthttp.Response{
 				StatusCode: 200,
 				Header:     responseheaders,
@@ -575,11 +585,8 @@ func handleDNSRequest(reqbuf []byte, dnsResolver DOHRoundTripper, requestheaders
 }
 
 func main() {
-	filehashmap, err := byteToJSONMap(embededfilehash)
-	if err != nil {
-		log.Println(err)
-		filehashmap = map[string]string{}
-	}
+	var filehashmap map[string]string = nil
+
 	fsthttp.ServeFunc(func(ctx context.Context, w fsthttp.ResponseWriter, r *fsthttp.Request) {
 		log.Println(r.URL, r.Method)
 		log.Println(r.Header)
@@ -663,7 +670,15 @@ func main() {
 				}
 				// return "/"
 			})(r, func(r *fsthttp.Request) *fsthttp.Response {
-
+				var err error
+				if filehashmap == nil {
+					filehashmap, err = byteToJSONMap(embededfilehash)
+					if err != nil {
+						log.Println(err)
+						filehashmap = map[string]string{}
+					}
+				}
+				log.Println(filehashmap)
 				return ServeStatic(staticfileprefix, embededFiles, filehashmap)(r, func(r *fsthttp.Request) *fsthttp.Response {
 					return &fsthttp.Response{StatusCode: fsthttp.StatusNotFound}
 				})
@@ -720,8 +735,11 @@ func main() {
 				}
 			}
 			w.WriteHeader(response.StatusCode)
-			defer response.Body.Close()
-			io.Copy(w, response.Body)
+			if response.Body != nil {
+				defer response.Body.Close()
+				io.Copy(w, response.Body)
+			}
+
 		}
 
 	})
