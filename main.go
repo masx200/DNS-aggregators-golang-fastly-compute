@@ -5,10 +5,11 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha512"
+	"embed"
+
 	// _ "embed"
 	"errors"
 	"fmt"
-	"github.com/fastly/compute-sdk-go/secretstore"
 	"io"
 	"math"
 	"math/rand"
@@ -20,6 +21,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fastly/compute-sdk-go/secretstore"
+
 	// "io"
 	// "os"
 	"github.com/miekg/dns"
@@ -29,6 +32,7 @@ import (
 	// "net/url"
 	"encoding/base64"
 	"encoding/hex"
+
 	// "fmt"
 	// "io"
 	"encoding/json"
@@ -55,7 +59,46 @@ var EIse2e8XUAUWt8webp []byte */
 // r: 表示客户端的请求。
 // next: 是一个函数，当当前请求的路径找不到对应的静态文件时，会调用该函数继续处理请求。
 // 返回值: 返回一个指向fsthttp.Response的指针，包含响应的状态码、头部和主体。
-func ServeStatic(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Response) *fsthttp.Response {
+func ServeStatic(staticfileprefix string, embededFiles embed.FS, filehashmap map[string]string) func(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Response) *fsthttp.Response {
+	return func(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Response) *fsthttp.Response {
+		var responseheaders = fsthttp.Header{}
+		decodedString, err := url.QueryUnescape(r.URL.Path)
+		if err != nil {
+			fmt.Println("Error:", err)
+			return &fsthttp.Response{
+				StatusCode: http.StatusInternalServerError,
+				Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
+			}
+		}
+		log.Println("path:", r.URL.Path, "decoded:", decodedString)
+		if decodedString == "/" {
+			decodedString = "/index.html"
+		}
+		fmt.Println(embededFiles.ReadDir("."))
+		file, err := embededFiles.Open(staticfileprefix + decodedString)
+		// var file, ok1 = filemap[decodedString]
+		// var ContentType, ok2 = typemap[decodedString]
+		var ContentType = GetContentType(decodedString)
+		if ContentType == "" {
+			ContentType = "application/octet-stream"
+		}
+
+		if file != nil && err == nil {
+			var filehash, ok = filehashmap[decodedString]
+			if ok {
+				responseheaders.Set("etag", fmt.Sprintf("\"%s\"", filehash))
+			}
+			responseheaders.Set("Content-Type", ContentType) //: []string{}
+			return &fsthttp.Response{
+				StatusCode: 200,
+				Header:     responseheaders,
+				Body:       (file),
+			}
+		} else {
+			log.Println(err)
+			return next(r)
+		}
+	}
 	// var filemap = map[string][]byte{
 	// 	"/":                             indexhtmlByte,
 	// 	"/favicon.ico":                  faviconByte,
@@ -66,37 +109,6 @@ func ServeStatic(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Resp
 	// 	"/favicon.ico":                  "image/x-icon",
 	// 	"/a8850f4365c46ec1.jpg_结果.webp": "image/webp",
 	// 	"/EIse2e8XUAUWt8_结果.webp":       "image/webp"}
-	decodedString, err := url.QueryUnescape(r.URL.Path)
-	if err != nil {
-		fmt.Println("Error:", err)
-		return &fsthttp.Response{
-			StatusCode: http.StatusInternalServerError,
-			Body:       io.NopCloser(strings.NewReader(http.StatusText(http.StatusInternalServerError) + "\n" + err.Error())),
-		}
-	}
-	log.Println("path:", r.URL.Path, "decoded:", decodedString)
-	if decodedString == "/" {
-		decodedString = "/index.html"
-	}
-	fmt.Println(embededFiles.ReadDir("."))
-	file, err := embededFiles.Open(staticfileprefix + decodedString)
-	// var file, ok1 = filemap[decodedString]
-	// var contenttype, ok2 = typemap[decodedString]
-	var contenttype = GetContentType(decodedString)
-	if contenttype == "" {
-		contenttype = "application/octet-stream"
-	}
-	if file != nil && err == nil {
-
-		return &fsthttp.Response{
-			StatusCode: 200,
-			Header:     fsthttp.Header{"Content-Type": []string{contenttype}},
-			Body:       (file),
-		}
-	} else {
-		log.Println(err)
-		return next(r)
-	}
 
 }
 
@@ -346,7 +358,7 @@ func CreateDOHMiddleWare(dnsResolver DOHRoundTripper, getPathname func() string)
 			// )
 			return handleDNSRequest(buf, dnsResolver, requestheaders)
 		}
-		if contentType := r.Header.Get("Content-Type"); http.MethodPost == r.Method && contentType == "application/dns-message" {
+		if ContentType := r.Header.Get("Content-Type"); http.MethodPost == r.Method && ContentType == "application/dns-message" {
 			buf, err := io.ReadAll(r.Body)
 			if len(buf) == 0 || err != nil {
 				return &fsthttp.Response{
@@ -563,6 +575,11 @@ func handleDNSRequest(reqbuf []byte, dnsResolver DOHRoundTripper, requestheaders
 }
 
 func main() {
+	filehashmap, err := byteToJSONMap(embededfilehash)
+	if err != nil {
+		log.Println(err)
+		filehashmap = map[string]string{}
+	}
 	fsthttp.ServeFunc(func(ctx context.Context, w fsthttp.ResponseWriter, r *fsthttp.Request) {
 		log.Println(r.URL, r.Method)
 		log.Println(r.Header)
@@ -647,7 +664,7 @@ func main() {
 				// return "/"
 			})(r, func(r *fsthttp.Request) *fsthttp.Response {
 
-				return ServeStatic(r, func(r *fsthttp.Request) *fsthttp.Response {
+				return ServeStatic(staticfileprefix, embededFiles, filehashmap)(r, func(r *fsthttp.Request) *fsthttp.Response {
 					return &fsthttp.Response{StatusCode: fsthttp.StatusNotFound}
 				})
 				// notfound = true
@@ -955,6 +972,9 @@ func DohClientWithCache(msg *dns.Msg, dohServerURL string, requestheaders map[st
 }
 func GetContentType(filename string) string {
 	ext := filepath.Ext(filename)
-	contentType := mime.TypeByExtension(ext)
-	return contentType
+	ContentType := mime.TypeByExtension(ext)
+	if ContentType == "" {
+		ContentType = "application/octet-stream"
+	}
+	return ContentType
 }
