@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha512"
-	_ "embed"
+	// _ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -38,7 +38,7 @@ import (
 	// "github.com/quic-go/quic-go/http3"
 )
 
-//go:embed static/index.html
+/* //go:embed static/index.html
 var indexhtmlByte []byte
 
 //go:embed static/favicon.ico
@@ -48,23 +48,23 @@ var faviconByte []byte
 var a8850f4365c46ec1webp []byte
 
 //go:embed static/EIse2e8XUAUWt8_结果.webp
-var EIse2e8XUAUWt8webp []byte
+var EIse2e8XUAUWt8webp []byte */
 
 // ServeStatic 用于处理静态文件服务的请求。
 // r: 表示客户端的请求。
 // next: 是一个函数，当当前请求的路径找不到对应的静态文件时，会调用该函数继续处理请求。
 // 返回值: 返回一个指向fsthttp.Response的指针，包含响应的状态码、头部和主体。
 func ServeStatic(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Response) *fsthttp.Response {
-	var filemap = map[string][]byte{
-		"/":                             indexhtmlByte,
-		"/favicon.ico":                  faviconByte,
-		"/a8850f4365c46ec1.jpg_结果.webp": a8850f4365c46ec1webp,
-		"/EIse2e8XUAUWt8_结果.webp":       EIse2e8XUAUWt8webp}
-	var typemap = map[string]string{
-		"/":                             "text/html",
-		"/favicon.ico":                  "image/x-icon",
-		"/a8850f4365c46ec1.jpg_结果.webp": "image/webp",
-		"/EIse2e8XUAUWt8_结果.webp":       "image/webp"}
+	// var filemap = map[string][]byte{
+	// 	"/":                             indexhtmlByte,
+	// 	"/favicon.ico":                  faviconByte,
+	// 	"/a8850f4365c46ec1.jpg_结果.webp": a8850f4365c46ec1webp,
+	// 	"/EIse2e8XUAUWt8_结果.webp":       EIse2e8XUAUWt8webp}
+	// var typemap = map[string]string{
+	// 	"/":                             "text/html",
+	// 	"/favicon.ico":                  "image/x-icon",
+	// 	"/a8850f4365c46ec1.jpg_结果.webp": "image/webp",
+	// 	"/EIse2e8XUAUWt8_结果.webp":       "image/webp"}
 	decodedString, err := url.QueryUnescape(r.URL.Path)
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -74,14 +74,14 @@ func ServeStatic(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Resp
 		}
 	}
 	log.Println("path:", r.URL.Path, "decoded:", decodedString)
-	var file, ok1 = filemap[decodedString]
-	var contenttype, ok2 = typemap[decodedString]
+	// var file, ok1 = filemap[decodedString]
+	// var contenttype, ok2 = typemap[decodedString]
 	if file != nil && ok2 && ok1 {
-		return &fsthttp.Response{
-			StatusCode: 200,
-			Header:     fsthttp.Header{"Content-Type": []string{contenttype}},
-			Body:       io.NopCloser(bytes.NewReader(file)),
-		}
+		// return &fsthttp.Response{
+		// 	StatusCode: 200,
+		// 	Header:     fsthttp.Header{"Content-Type": []string{contenttype}},
+		// 	Body:       io.NopCloser(bytes.NewReader(file)),
+		// }
 	} else {
 		return next(r)
 	}
