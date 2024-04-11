@@ -8,16 +8,17 @@ import (
 	// _ "embed"
 	"errors"
 	"fmt"
+	"github.com/fastly/compute-sdk-go/secretstore"
 	"io"
 	"math"
 	"math/rand"
+	"mime"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/fastly/compute-sdk-go/secretstore"
 
 	// "io"
 	// "os"
@@ -940,4 +941,9 @@ func DohClientWithCache(msg *dns.Msg, dohServerURL string, requestheaders map[st
 	}
 	responseheaders.Add("cache-control", "public,max-age="+fmt.Sprint(ttlresult)+",s-maxage="+fmt.Sprint(ttlresult))
 	return res, responseheaders, nil
+}
+func GetContentType(filename string) string {
+	ext := filepath.Ext(filename)
+	contentType := mime.TypeByExtension(ext)
+	return contentType
 }
