@@ -3,6 +3,6 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [
-    VitePWA({ registerType: "autoUpdate" }),
+    VitePWA({ registerType: "autoUpdate", workbox: { globPatterns: ["*/*"] } }),
   ],
 });
