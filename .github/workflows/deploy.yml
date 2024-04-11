@@ -30,7 +30,7 @@ jobs:
         with:
           deno-version: v1.42.2
 
-      - run: deno task cache
+      #- run: deno task cache
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
