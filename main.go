@@ -75,18 +75,26 @@ func ServeStatic(r *fsthttp.Request, next func(r *fsthttp.Request) *fsthttp.Resp
 		}
 	}
 	log.Println("path:", r.URL.Path, "decoded:", decodedString)
-
-	file, err := embededFiles.Open(decodedString[1:])
+	if decodedString == "/" {
+		decodedString = "/index.html"
+	}
+	fmt.Println(embededFiles.ReadDir("."))
+	file, err := embededFiles.Open(staticfileprefix + decodedString)
 	// var file, ok1 = filemap[decodedString]
 	// var contenttype, ok2 = typemap[decodedString]
 	var contenttype = GetContentType(decodedString)
-	if file != nil && err != nil {
+	if contenttype == "" {
+		contenttype = "application/octet-stream"
+	}
+	if file != nil && err == nil {
+
 		return &fsthttp.Response{
 			StatusCode: 200,
 			Header:     fsthttp.Header{"Content-Type": []string{contenttype}},
-			Body:       io.NopCloser(file),
+			Body:       (file),
 		}
 	} else {
+		log.Println(err)
 		return next(r)
 	}
 
