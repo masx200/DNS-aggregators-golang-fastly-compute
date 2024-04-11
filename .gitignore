@@ -21,3 +21,4 @@ go.work
 # Fastly Compute compiler output (bin contains main.wasm, pkg contains package.tar.gz)
 /bin
 /pkg
+.vscode/settings.json
