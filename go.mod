@@ -1,4 +1,4 @@
-module compute-starter-kit-go
+module main
 
 go 1.21
 
