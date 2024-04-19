@@ -248,9 +248,9 @@ func handleDNSRequest(reqbuf []byte, dnsResolver DOHRoundTripper, requestheaders
 	})
 
 	/* cname展平操作 */
-
-	if len(cnames) > 1 && len(others) > 0 {
-		var recordname = others[0].Header().Name
+	/* 如果只有一个或者以上的cname记录,则把cname记录放在其他记录前面,不允许出现相同名字的cname记录.把其他记录的名字都改成同一个 */
+	if len(cnames) >= 1 && len(others) > 0 {
+		var recordname = cnames[len(cnames)-1].Header().Name
 		for _, o := range others {
 			o.Header().Name = recordname
 		}
