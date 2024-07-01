@@ -1,5 +1,5 @@
-github.com/fastly/compute-sdk-go v1.3.1 h1:7Y48Wahwa+JQtZcLrH0xwqvPOIgg93n7WMhr+ujkzd4=
-github.com/fastly/compute-sdk-go v1.3.1/go.mod h1:AdOwbVc56tusuDLtufaO57NIzfoox4bgvRc460B/T8o=
+github.com/fastly/compute-sdk-go v1.3.2 h1:9y49qzks/dH8QIPUuawfW8eKJRAOT1XY5hO9XP8xoCw=
+github.com/fastly/compute-sdk-go v1.3.2/go.mod h1:AdOwbVc56tusuDLtufaO57NIzfoox4bgvRc460B/T8o=
 github.com/miekg/dns v1.1.59 h1:C9EXc/UToRwKLhK5wKU/I4QVsBUc8kE6MkHBkeypWZs=
 github.com/miekg/dns v1.1.59/go.mod h1:nZpewl5p6IvctfgrckopVx2OlSEHPRO/U4SYkRklrEk=
 golang.org/x/mod v0.16.0 h1:QX4fJ0Rr5cPQCF7O9lh9Se4pmwfwskqZfq5moyldzic=
