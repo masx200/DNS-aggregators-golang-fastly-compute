@@ -22,3 +22,4 @@ go.work
 /bin
 /pkg
 .vscode/settings.json
+/static/pnpm-lock.yaml
