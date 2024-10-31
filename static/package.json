@@ -11,8 +11,8 @@
   "devDependencies": {
     "typescript": "^5.2.2",
     "vite": "^5.2.14",
-    "vite-plugin-pwa": "^0.19.8",
-	"rollup":"4.22.4"
+    "rollup": "4.22.4",
+    "vite-plugin-pwa": "^0.19.8"
   },
   "dependencies": {
     "@babel/plugin-bugfix-firefox-class-in-computed-class-key": "^7.24.5"
