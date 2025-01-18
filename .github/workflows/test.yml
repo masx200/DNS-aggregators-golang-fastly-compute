@@ -1,24 +1,58 @@
-on: pull_request
-name: Test
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: test
+
+on:
+  
+  pull_request:
+    branches: ["master"]
+
 jobs:
-  test:
+  build:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+        node-version: [21.7.1]
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    - name: Setup Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: 'stable'
-        check-latest: true
-    - name: Setup Fastly CLI
-      uses: fastly/compute-actions/setup@v5
-    - name: Update Go SDK
-      run: go get github.com/fastly/compute-sdk-go@latest
-    - name: Build and test
-      uses: fastly/compute-actions/build@v5
-      with:
-        verbose: true
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.deno
+            ~/.cache/deno
+          key: ${{ runner.os }}-deno-${{ hashFiles('**/deps.ts') }}-${{ hashFiles('**/import_map.json') }}
+
+      - name: Setup Deno
+
+        uses: denoland/setup-deno@v1.1.4
+        with:
+          deno-version: v1.42.2
+
+      #- run: deno task cache
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: |
+          cd static
+          npx -y cnpm install
+          npm run build
+          cd ../
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+
+      - name: Update Go SDK
+        run: go get github.com/fastly/compute-sdk-go@latest
+      - run: deno run -A calculateSha512ForDir.ts
+      - name: Deploy to Compute@Edge
+        uses: fastly/compute-actions@v5
+        env:
+          FASTLY_API_TOKEN: ${{ secrets.FASTLY_API_TOKEN  }}
+
+      # - run: fastly compute publish
+      #   env:
+      #     FASTLY_API_TOKEN: ${{ secrets.FASTLY_API_TOKEN  }}
